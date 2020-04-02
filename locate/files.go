@@ -3,7 +3,6 @@ package locate
 import (
 	"go/ast"
 	"go/token"
-	"strings"
 
 	"golang.org/x/tools/go/packages"
 )
@@ -22,20 +21,6 @@ func ImportBlock(file *ast.File) (start, end token.Pos) {
 		end = d.End()
 	}
 	return
-}
-
-// Files returns a string representation of all files that contain interfaces
-// or functions that were located..
-func (t *T) Files() string {
-	out := strings.Builder{}
-	t.WalkFiles(func(name string, pkg *packages.Package, comments ast.CommentMap, file *ast.File, hitMask HitMask) {
-		out.WriteString(name)
-		out.WriteString(": ")
-		out.WriteString(file.Name.String())
-		out.WriteString(" (" + hitMask.String() + ")")
-		out.WriteString("\n")
-	})
-	return out.String()
 }
 
 // WalkFiles calls the supplied function for each file that contains

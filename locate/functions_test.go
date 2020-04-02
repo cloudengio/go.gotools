@@ -19,7 +19,7 @@ func TestFunctions(t *testing.T) {
 		t.Fatalf("locator.Do: %v", err)
 	}
 
-	compareLocations(t, locator.Functions(), []string{
+	compareLocations(t, listFunctions(locator), []string{
 		here + "data.Fn2",
 	}, []string{
 		"data/functions_more.go:3:1",
@@ -31,21 +31,21 @@ func TestFunctions(t *testing.T) {
 	if err := locator.Do(ctx); err != nil {
 		t.Fatalf("locator.Do: %v", err)
 	}
-	compareLocations(t, locator.Functions(), []string{
+	compareLocations(t, listFunctions(locator), []string{
 		here + "data.Fn1",
 		here + "data.Fn2",
 	}, []string{
 		"data/functions.go:7:1",
 		"data/functions_more.go:3:1",
 	})
-	compareLocations(t, locator.Functions(), []string{
+	compareLocations(t, listFunctions(locator), []string{
 		here + "data.Fn1",
 		here + "data.Fn2",
 	}, []string{
 		"data/functions.go:7:1",
 		"data/functions_more.go:3:1",
 	})
-	compareFiles(t, locator.Files(),
+	compareFiles(t, listFiles(locator),
 		filepath.Join("data", "functions.go")+": data",
 		filepath.Join("data", "functions_more.go")+": data",
 	)
@@ -59,12 +59,12 @@ func TestFunctionsAndInterfaces(t *testing.T) {
 	if err := locator.Do(ctx); err != nil {
 		t.Fatalf("locator.Do: %v", err)
 	}
-	compareLocations(t, locator.Interfaces(), []string{
+	compareLocations(t, listInterfaces(locator), []string{
 		here + "data.Ifc2 interface",
 	}, []string{
 		filepath.Join("data", "interfaces.go") + ":12:6",
 	})
-	compareLocations(t, locator.Functions(), []string{
+	compareLocations(t, listFunctions(locator), []string{
 		here + "data.Fn2",
 	}, []string{
 		filepath.Join("data", "functions_more.go") + ":3:1",

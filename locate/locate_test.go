@@ -2,58 +2,74 @@ package locate_test
 
 import (
 	"context"
+	"fmt"
+	"go/ast"
+	"go/types"
 	"sort"
 	"strings"
 	"testing"
 
 	"cloudeng.io/errors"
 	"cloudeng.io/go/locate"
+	"golang.org/x/tools/go/packages"
 )
 
 const here = "cloudeng.io/go/locate/testdata/"
 
-func compareLocations(t *testing.T, value string, prefixes, suffixes []string) {
+func listInterfaces(locator *locate.T) []string {
+	out := []string{}
+	locator.WalkInterfaces(func(name string, pkg *packages.Package,
+		file *ast.File, decl *ast.TypeSpec, ifc *types.Interface) {
+		line := fmt.Sprintf("%s interface %s", name, pkg.Fset.PositionFor(decl.Pos(), false))
+		out = append(out, line)
+	})
+	return out
+}
+
+func listFunctions(locator *locate.T) []string {
+	out := []string{}
+	locator.WalkFunctions(func(name string, pkg *packages.Package, file *ast.File, fn *types.Func, decl *ast.FuncDecl, implements []string) {
+		line := name
+		if len(implements) > 0 {
+			line += fmt.Sprintf(" implements %s", strings.Join(implements, ", "))
+		}
+		line += fmt.Sprintf(" @ %s", pkg.Fset.PositionFor(decl.Type.Func, false))
+		out = append(out, line)
+	})
+	return out
+}
+
+func listFiles(locator *locate.T) []string {
+	out := []string{}
+	locator.WalkFiles(func(name string, pkg *packages.Package, comments ast.CommentMap, file *ast.File, hitMask locate.HitMask) {
+		line := fmt.Sprintf("%s: %s (%s)", name, file.Name, hitMask)
+		out = append(out, line)
+	})
+	return out
+}
+
+func compareLocations(t *testing.T, locations []string, prefixes, suffixes []string) {
 	loc := errors.Caller(2, 1)
-	locations := strings.Split(value, "\n")
-	if got, want := len(locations), len(suffixes)+1; got != want {
+	if got, want := len(locations), len(suffixes); got != want {
 		t.Errorf("%v: got %v, want %v", loc, got, want)
 		return
 	}
 	sort.Strings(locations)
 	for i, l := range locations {
-		if i == 0 {
-			// empty line comes first after sorting.
-			if got, want := len(l), 0; got != want {
-				t.Errorf("%v: got %v, want %v", loc, got, want)
-			}
-			continue
-		}
-		if got, want := l, prefixes[i-1]; !strings.HasPrefix(got, want) {
+		if got, want := l, prefixes[i]; !strings.HasPrefix(got, want) {
 			t.Errorf("%v: %v doesn't start with %v", loc, got, want)
 		}
-		if got, want := l, suffixes[i-1]; !strings.HasSuffix(got, want) {
+		if got, want := l, suffixes[i]; !strings.HasSuffix(got, want) {
 			t.Errorf("%v: got %v doesn't have suffix %v", loc, got, want)
 		}
 	}
 }
 
-func compareFiles(t *testing.T, files string, expected ...string) {
+func compareFiles(t *testing.T, found []string, expected ...string) {
 	loc := errors.Caller(2, 1)
-	found := strings.Split(files, "\n")
 	sort.Strings(found)
-	if got, want := len(found), len(expected)+1; got != want {
-		t.Errorf("%v: got %v, want %v", loc, got, want)
-		return
-	}
 	for i, f := range found {
-		if i == 0 {
-			// empty line comes first after sorting.
-			if got, want := len(f), 0; got != want {
-				t.Errorf("%v: got %v, want %v", loc, got, want)
-			}
-			continue
-		}
-		if got, want := f, expected[i-1]; !strings.Contains(got, want) {
+		if got, want := f, expected[i]; !strings.Contains(got, want) {
 			t.Errorf("%v: got %v doesn't have suffix %v", loc, got, want)
 		}
 	}

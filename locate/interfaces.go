@@ -7,7 +7,6 @@ import (
 	"go/token"
 	"go/types"
 	"regexp"
-	"strings"
 
 	"cloudeng.io/sync/errgroup"
 	"golang.org/x/tools/go/packages"
@@ -149,19 +148,6 @@ func findInterfaceDecl(name string, file *ast.File) *ast.TypeSpec {
 		}
 	}
 	return nil
-}
-
-// Interfaces returns a string representation of all interface locations.
-func (t *T) Interfaces() string {
-	out := strings.Builder{}
-	t.WalkInterfaces(func(name string, pkg *packages.Package,
-		file *ast.File, decl *ast.TypeSpec, ifc *types.Interface) {
-		out.WriteString(name)
-		out.WriteString(" interface ")
-		out.WriteString(pkg.Fset.PositionFor(decl.Pos(), false).String())
-		out.WriteString("\n")
-	})
-	return out.String()
 }
 
 type interfaceDesc struct {

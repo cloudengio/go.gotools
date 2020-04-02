@@ -5,7 +5,9 @@ package locate
 
 import (
 	"context"
+	"fmt"
 	"go/token"
+	"os/exec"
 	"sort"
 	"strings"
 	"sync"
@@ -162,8 +164,15 @@ func (t *T) AddComments(comments ...string) {
 func (t *T) Do(ctx context.Context) error {
 	interfaces := dedup(t.interfacePackages)
 	functions := dedup(t.functionPackages)
-	packages := dedup(t.implementationPackages)
-	allPackages := packagesToLoad(interfaces, functions, packages)
+	packages, err := listPackages(ctx, t.implementationPackages)
+	if err != nil {
+		return err
+	}
+	packages = dedup(packages)
+	allPackages, err := packagesToLoad(ctx, interfaces, functions, packages)
+	if err != nil {
+		return err
+	}
 	comments := dedup(t.commentExpressions)
 	if err := t.loader.loadPaths(allPackages); err != nil {
 		return err
@@ -197,4 +206,23 @@ func sorter(sorted []sortByPos) {
 		}
 		return sorted[i].pos.Filename < sorted[j].pos.Filename
 	})
+}
+
+func listPackages(ctx context.Context, packages []string) ([]string, error) {
+	cmd := exec.CommandContext(ctx, "go", append([]string{"list"}, packages...)...)
+	out, err := cmd.Output()
+	if err != nil {
+		cl := strings.Join(cmd.Args, ", ")
+		exitErr := err.(*exec.ExitError)
+		return nil, fmt.Errorf("failed to run %v: %v\n%s", cl, err, exitErr.Stderr)
+	}
+	parts := strings.Split(string(out), "\n")
+	paths := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if len(p) == 0 {
+			continue
+		}
+		paths = append(paths, p)
+	}
+	return paths, nil
 }

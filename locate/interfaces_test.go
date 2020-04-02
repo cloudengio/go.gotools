@@ -30,7 +30,7 @@ func TestInterfaces(t *testing.T) {
 	if err := locator.Do(ctx); err != nil {
 		t.Fatalf("locator.Do: %v", err)
 	}
-	compareLocations(t, locator.Interfaces(), []string{
+	compareLocations(t, listInterfaces(locator), []string{
 		here + "data.Ifc1",
 		here + "data.Ifc2",
 	}, []string{
@@ -46,7 +46,7 @@ func TestInterfaces(t *testing.T) {
 		t.Fatalf("locator.Do: %v", err)
 	}
 
-	compareLocations(t, locator.Interfaces(), []string{
+	compareLocations(t, listInterfaces(locator), []string{
 		here + "data.Ifc1",
 		here + "data.Ifc2",
 		here + "data.Ifc3",
@@ -55,7 +55,7 @@ func TestInterfaces(t *testing.T) {
 		filepath.Join("data", "interfaces.go") + ":12:6",
 		filepath.Join("data", "interfaces.go") + ":16:6",
 	})
-	compareFiles(t, locator.Files(), "data/interfaces.go: data")
+	compareFiles(t, listFiles(locator), "data/interfaces.go: data")
 }
 
 func TestEmbeddedInterfaces(t *testing.T) {
@@ -66,7 +66,7 @@ func TestEmbeddedInterfaces(t *testing.T) {
 	if err := locator.Do(ctx); err != nil {
 		t.Fatalf("locator.Do: %v", err)
 	}
-	if got, want := locator.Interfaces(), ""; got != want {
+	if got, want := len(listInterfaces(locator)), 0; got != want {
 		t.Errorf("got %v, want %v", got, want)
 	}
 
@@ -76,7 +76,7 @@ func TestEmbeddedInterfaces(t *testing.T) {
 	if err := locator.Do(ctx); err != nil {
 		t.Fatalf("locator.Do: %v", err)
 	}
-	compareLocations(t, locator.Interfaces(), []string{
+	compareLocations(t, listInterfaces(locator), []string{
 		here + "data/embedded.IfcE",
 		here + "data/embedded.IfcE1",
 		here + "data/embedded.IfcE2",
@@ -89,7 +89,7 @@ func TestEmbeddedInterfaces(t *testing.T) {
 		filepath.Join("data", "embedded", "embedded.go") + ":13:6",
 		filepath.Join("data", "embedded", "pkg", "interface.go") + ":3:6",
 	})
-	compareFiles(t, locator.Files(),
+	compareFiles(t, listFiles(locator),
 		filepath.Join("data", "embedded", "embedded.go")+": embedded",
 		filepath.Join("data", "embedded", "pkg", "interface.go")+": pkg",
 	)
@@ -104,7 +104,7 @@ func TestFindImplementations(t *testing.T) {
 		t.Fatalf("locator.Do: %v", err)
 	}
 
-	compareLocations(t, locator.Functions(), []string{
+	compareLocations(t, listFunctions(locator), []string{
 		"(*" + here + "impl.Impl1).M1 implements " + implements("Ifc1"),
 		"(*" + here + "impl.Impl1).M2 implements " + implements("Ifc1"),
 		"(*" + here + "impl.Impl12).M1 implements " + implements("Ifc1", "Ifc2", "Ifc3"),

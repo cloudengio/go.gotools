@@ -1,6 +1,7 @@
 package locate
 
 import (
+	"context"
 	"fmt"
 	"path"
 	"regexp"
@@ -64,10 +65,10 @@ func packagesFromSpecs(specs []string) []string {
 
 // packagesToLoad extracts the package names from all input specs
 // and packages and dedups them in preparation for loading all of them.
-func packagesToLoad(ifcs, fns, impls []string) []string {
-	all := make([]string, 0, len(ifcs)+len(fns)+len(impls))
+func packagesToLoad(ctx context.Context, ifcs, fns, pkgs []string) ([]string, error) {
+	all := make([]string, 0, len(ifcs)+len(fns)+len(pkgs))
 	all = append(all, packagesFromSpecs(ifcs)...)
 	all = append(all, packagesFromSpecs(fns)...)
-	all = append(all, impls...)
-	return dedup(all)
+	all = append(all, pkgs...)
+	return dedup(all), nil
 }
