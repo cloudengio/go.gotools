@@ -42,6 +42,9 @@ func listFunctions(locator *locate.T) []string {
 func listFiles(locator *locate.T) []string {
 	out := []string{}
 	locator.WalkFiles(func(name string, pkg *packages.Package, comments ast.CommentMap, file *ast.File, hitMask locate.HitMask) {
+		if hitMask == 0 {
+			return
+		}
 		line := fmt.Sprintf("%s: %s (%s)", name, file.Name, hitMask)
 		out = append(out, line)
 	})
@@ -124,5 +127,22 @@ func TestMultiPackageError(t *testing.T) {
 	err = locator.Do(ctx)
 	if err == nil || !strings.Contains(err.Error(), "failed to compile regexp") {
 		t.Fatalf("expected a specific error, but got: %v", err)
+	}
+}
+
+func TestHitMask(t *testing.T) {
+	for i, tc := range []struct {
+		hm  locate.HitMask
+		out string
+	}{
+		{locate.HasComment, "comment"},
+		{locate.HasFunction, "function"},
+		{locate.HasInterface, "interface"},
+		{locate.HasComment | locate.HasInterface, "comment, interface"},
+		{locate.HasInterface | locate.HasComment, "comment, interface"},
+	} {
+		if got, want := tc.hm.String(), tc.out; got != want {
+			t.Errorf("%v: got %v, want %v", i, got, want)
+		}
 	}
 }

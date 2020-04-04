@@ -43,9 +43,6 @@ func (t *T) WalkFiles(fn func(
 		t.mu.Lock()
 		has := t.dirty[filename]
 		t.mu.Unlock()
-		if has == 0 {
-			return
-		}
 		fn(filename, pkg, comments, file, has)
 	})
 }

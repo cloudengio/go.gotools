@@ -20,6 +20,9 @@ func TestFilesAndImports(t *testing.T) {
 	}
 	start, stop, masks := []string{}, []string{}, []string{}
 	locator.WalkFiles(func(filename string, pkg *packages.Package, comments ast.CommentMap, file *ast.File, has locate.HitMask) {
+		if has == 0 {
+			return
+		}
 		begin, end := locate.ImportBlock(file)
 		start = append(start, pkg.Fset.Position(begin).String())
 		stop = append(stop, pkg.Fset.Position(end).String())
