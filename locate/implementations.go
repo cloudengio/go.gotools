@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"go/types"
+	"regexp"
 
+	"cloudeng.io/go/locate/locateutil"
 	"cloudeng.io/sync/errgroup"
 )
 
@@ -20,32 +22,31 @@ func (t *T) findImplementations(ctx context.Context, packages []string) error {
 	return group.Wait()
 }
 
+var allfuncs = regexp.MustCompile(".*")
+
 func (t *T) findImplementationInPackage(ctx context.Context, pkgPath string) error {
 	pkg := t.loader.lookupPackage(pkgPath)
 	if pkg == nil {
 		return fmt.Errorf("locating interface implementations: failed to lookup: %v", pkgPath)
 	}
-	checked := pkg.TypesInfo
-	// Look in info.Defs for functions.
-	for k, obj := range checked.Defs {
-		if obj == nil || !obj.Exported() || obj.Parent() != nil {
+	funcs := locateutil.Functions(pkg, allfuncs, false)
+	for _, fd := range funcs {
+		if !fd.Type.Exported() || fd.Decl == nil {
+			// Ignore non-exported functions and interface function definitions
+			// which do not have a declaration.
 			continue
 		}
-		fn, ok := obj.(*types.Func)
-		if !ok {
-			continue
-		}
-		sig := fn.Type().(*types.Signature)
+		sig := fd.Type.Type().(*types.Signature)
 		rcv := sig.Recv()
-		if rcv == nil || isInterfaceType(pkg.PkgPath, rcv.Type()) != nil {
-			// ignore functions and abstract methods
+		if rcv == nil || locateutil.IsAbstract(fd.Type) {
+			// Ignore functions and abstract methods.
 			continue
 		}
-		// a concrete method
+		// This is concrete method, check it against all interfaces.
 		t.mu.Lock()
 		for ifcPath, ifcType := range t.interfaces {
 			if types.Implements(rcv.Type(), ifcType.ifc) {
-				t.addFunctionLocked(pkgPath, k.Pos(), fn, ifcPath)
+				t.addFunctionLocked(fd, pkgPath, ifcPath)
 			}
 		}
 		t.mu.Unlock()

@@ -21,6 +21,7 @@ type FuncDesc struct {
 	Decl     *ast.FuncDecl
 	File     *ast.File
 	Position token.Position
+	Package  *packages.Package
 }
 
 func Functions(pkg *packages.Package, re *regexp.Regexp, noMethods bool) []FuncDesc {
@@ -49,6 +50,7 @@ func Functions(pkg *packages.Package, re *regexp.Regexp, noMethods bool) []FuncD
 			}
 		}
 		descs = append(descs, FuncDesc{
+			Package:  pkg,
 			Type:     fn,
 			Abstract: abstract,
 			Decl:     findFuncOrMethodDecl(fn, file),

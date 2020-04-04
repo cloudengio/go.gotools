@@ -8,6 +8,7 @@ import (
 	"go/types"
 	"regexp"
 
+	"cloudeng.io/go/locate/locateutil"
 	"cloudeng.io/sync/errgroup"
 	"golang.org/x/tools/go/packages"
 )
@@ -42,7 +43,7 @@ func (t *T) findInterfacesInPackage(ctx context.Context, pkgPath string, ifcRE *
 		if _, ok := obj.(*types.TypeName); !ok {
 			continue
 		}
-		ifcType := isInterfaceType(pkg.PkgPath, obj.Type())
+		ifcType := locateutil.IsInterfaceDefinition(pkg, obj)
 		if ifcType == nil {
 			continue
 		}
@@ -74,7 +75,7 @@ func (t *T) findInterfacesInPackage(ctx context.Context, pkgPath string, ifcRE *
 			}
 			for ek, eobj := range checked.Defs {
 				if names[ek.Name] {
-					ifcType := isInterfaceType(pkg.PkgPath, eobj.Type())
+					ifcType := locateutil.IsInterfaceDefinition(pkg, eobj)
 					if ifcType == nil {
 						continue
 					}
@@ -87,25 +88,6 @@ func (t *T) findInterfacesInPackage(ctx context.Context, pkgPath string, ifcRE *
 	}
 	if !t.options.ignoreMissingFunctionsEtc && found == 0 {
 		return fmt.Errorf("failed to find any exported interfaces in %v for %s", pkgPath, ifcRE)
-	}
-	return nil
-}
-
-// isInterfaceType returns the interface type if it is an interface type
-// defined in the specified package.
-func isInterfaceType(path string, typ types.Type) *types.Interface {
-	it, ok := typ.Underlying().(*types.Interface)
-	if !ok {
-		return nil
-	}
-	if named, ok := typ.(*types.Named); ok {
-		obj := named.Obj()
-		if obj == nil || obj.Pkg() == nil {
-			return nil
-		}
-		if obj.Pkg().Path() == path {
-			return it
-		}
 	}
 	return nil
 }

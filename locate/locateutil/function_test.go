@@ -1,7 +1,9 @@
 package locateutil_test
 
 import (
+	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 
@@ -9,14 +11,15 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+var packagesConfig = &packages.Config{
+	Mode: packages.NeedName | packages.NeedSyntax |
+		packages.NeedTypes | packages.NeedTypesInfo | packages.NeedCompiledGoFiles,
+	Tests:      false,
+	BuildFlags: nil,
+}
+
 func TestFunction(t *testing.T) {
-	cfg := &packages.Config{
-		Mode: packages.NeedName | packages.NeedSyntax |
-			packages.NeedTypes | packages.NeedTypesInfo | packages.NeedCompiledGoFiles,
-		Tests:      false,
-		BuildFlags: nil,
-	}
-	pkgs, err := packages.Load(cfg,
+	pkgs, err := packages.Load(packagesConfig,
 		"cloudeng.io/go/locate/testdata/data",
 		"cloudeng.io/go/locate/testdata/impl",
 	)
@@ -40,7 +43,6 @@ func TestFunction(t *testing.T) {
 	if got, want := len(fns), 16; got != want {
 		t.Errorf("got %v, want %v", got, want)
 	}
-
 	for i, tc := range []struct {
 		name, pos string
 	}{
@@ -73,5 +75,60 @@ func TestFunction(t *testing.T) {
 		if fns[i].Decl == nil && !fns[i].Abstract {
 			t.Errorf("missing declaration for %v", i)
 		}
+	}
+}
+
+func TestInterfaceType(t *testing.T) {
+	pkgs, err := packages.Load(packagesConfig,
+		"cloudeng.io/go/locate/testdata/data",
+	)
+	if err != nil {
+		t.Errorf("pkg.Load: %v", err)
+	}
+	pkg := pkgs[0]
+	names := []string{}
+	defs := []string{}
+	for k, v := range pkg.TypesInfo.Defs {
+		if v == nil {
+			continue
+		}
+		if locateutil.InterfaceType(v.Type()) != nil {
+			names = append(names, k.Name)
+		}
+		if locateutil.IsInterfaceDefinition(pkg, v) != nil {
+			defs = append(defs, k.Name)
+		}
+	}
+	sort.Strings(names)
+	sort.Strings(defs)
+	want := []string{
+		"Field", "Ifc1", "Ifc2", "Ifc3", "IgnoredVariable", "hidden",
+	}
+	if got, want := names, want; !reflect.DeepEqual(got, want) {
+		t.Errorf(" got %v, want %v", got, want)
+	}
+	want = []string{
+		"Ifc1", "Ifc2", "Ifc3", "hidden",
+	}
+	if got, want := defs, want; !reflect.DeepEqual(got, want) {
+		t.Errorf(" got %v, want %v", got, want)
+	}
+}
+
+func TestImports(t *testing.T) {
+	pkgs, err := packages.Load(packagesConfig,
+		"cloudeng.io/go/locate/testdata/imports",
+	)
+	if err != nil {
+		t.Errorf("pkg.Load: %v", err)
+	}
+	pkg := pkgs[0]
+	fns := locateutil.Functions(pkg, regexp.MustCompile(".*"), true)
+	start, end := locateutil.ImportBlock(fns[0].File)
+	if got, want := pkg.Fset.Position(start).String(), "blocks.go:3:1"; !strings.HasSuffix(got, want) {
+		t.Errorf("got %v, doesn't have suffix %v\n", got, want)
+	}
+	if got, want := pkg.Fset.Position(end).String(), "blocks.go:8:2"; !strings.HasSuffix(got, want) {
+		t.Errorf("got %v, doesn't have suffix %v\n", got, want)
 	}
 }

@@ -1,8 +1,12 @@
 package locateutil
 
-import 	"go/types"
+import (
+	"go/types"
 
-// IsAbstract returns true if the functional declaration is abstract.
+	"golang.org/x/tools/go/packages"
+)
+
+// IsAbstract returns true if the function declaration is abstract.
 func IsAbstract(fn *types.Func) bool {
 	if fn == nil {
 		return false
@@ -11,15 +15,41 @@ func IsAbstract(fn *types.Func) bool {
 	if sig.Recv() == nil {
 		return false
 	}
-	return isAbstract(sig.Recv().Type())
+	return InterfaceType(sig.Recv().Type()) != nil
 }
 
-func isAbstract(typ types.Type) bool{
+// InterfaceType returns the underlying *types.Interface if typ represents
+// an interface or nil otherwise.
+func InterfaceType(typ types.Type) *types.Interface {
 	switch v := typ.(type) {
 	case *types.Interface:
-		return true
+		return v
 	case *types.Named:
-		return isAbstract(v.Underlying())
+		return InterfaceType(v.Underlying())
 	}
-	return false
+	return nil
+}
+
+// IsInterfaceDefinition returns the interface type that the suplied object
+// defines in the specified package, if any. This specifically excludes
+// embedded types which are defined in other packages.
+func IsInterfaceDefinition(pkg *packages.Package, obj types.Object) *types.Interface {
+	if _, ok := obj.(*types.TypeName); !ok {
+		return nil
+	}
+	typ := obj.Type()
+	ifc := InterfaceType(typ)
+	if ifc == nil {
+		return nil
+	}
+	if named, ok := typ.(*types.Named); ok {
+		obj := named.Obj()
+		if obj == nil || obj.Pkg() == nil {
+			return nil
+		}
+		if obj.Pkg().Path() == pkg.PkgPath {
+			return ifc
+		}
+	}
+	return nil
 }
