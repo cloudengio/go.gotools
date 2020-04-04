@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"cloudeng.io/go/locate"
+	"cloudeng.io/go/locate/locateutil"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -23,7 +24,7 @@ func TestFilesAndImports(t *testing.T) {
 		if has == 0 {
 			return
 		}
-		begin, end := locate.ImportBlock(file)
+		begin, end := locateutil.ImportBlock(file)
 		start = append(start, pkg.Fset.Position(begin).String())
 		stop = append(stop, pkg.Fset.Position(end).String())
 		masks = append(masks, has.String())

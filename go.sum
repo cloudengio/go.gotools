@@ -1,13 +1,7 @@
-cloudeng.io v0.0.0-20200331205939-2a5cd9b92215 h1:SBEtJ3CgeLVHdh0VxyRoURFHWRjGj5/8plZJY4Kr12U=
-cloudeng.io/errors v0.0.0-20200306051138-cf9454181635/go.mod h1:4iZnGEBj5F3SqTHZF6AHiFMgeHeJWJJkVHx/UwbDYok=
-cloudeng.io/errors v0.0.4 h1:p88RU0KV9TkGyFg8iGcUKzkMArlfPMMSE+kGysqKuhw=
-cloudeng.io/errors v0.0.4/go.mod h1:4iZnGEBj5F3SqTHZF6AHiFMgeHeJWJJkVHx/UwbDYok=
-cloudeng.io/sync v0.0.4 h1:ZqjlJ0mac38jM8n1thHyzrZfIGxgAtDrUK5GC5wyD0o=
-cloudeng.io/sync v0.0.4/go.mod h1:dtsfHerOgTa/EMSRWVXhIxcGgY1tgH1yp9zWpxU48m4=
-github.com/cosnicolaou/goannotate v0.0.0-20200223224139-e8d07acab9cd h1:hdSMFAMSjRjFXl0C/e9XC/fwpRSeYFGkJaBCg6Xl6oc=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
+golang.org/x/mod v0.2.0 h1:KU7oHjnv3XNWfa5COkzUifxZmxp1TyI7ImMXqFxLwvQ=
 golang.org/x/mod v0.2.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
 golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
 golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
@@ -22,5 +16,5 @@ golang.org/x/tools v0.0.0-20200402165432-3304cfb00fb2 h1:cVt4HqngovVXeKERtLslij8
 golang.org/x/tools v0.0.0-20200402165432-3304cfb00fb2/go.mod h1:EkVYQZoAsY45+roYkvgYkIh4xh/qjgUK9TdY2XT94GE=
 golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
+golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 h1:E7g+9GITq07hpfrRu66IVDexMakfv52eLZ2CXBWiKr4=
 golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
-v.io v0.1.7 h1:sWGhECnK4dkeiHx5I1OzHi7KK5FfjGyoVteSE4epsUA=
