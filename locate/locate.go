@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"cloudeng.io/sync/errgroup"
+	"golang.org/x/tools/go/packages"
 )
 
 type traceFunc func(string, ...interface{})
@@ -225,4 +226,10 @@ func listPackages(ctx context.Context, packages []string) ([]string, error) {
 		paths = append(paths, p)
 	}
 	return paths, nil
+}
+
+// WalkPackages calls the supplied function for each package loaded. The
+// function is called in lexicographic order of package path.
+func (t *T) WalkPackages(fn func(pkg *packages.Package)) {
+	t.loader.walkPackages(fn)
 }

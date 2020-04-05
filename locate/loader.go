@@ -132,3 +132,20 @@ func (ld *loader) walkFiles(fn func(filename string, pkg *packages.Package, cmap
 		fn(file.name, file.pkg, file.comments, file.ast)
 	}
 }
+
+func (ld *loader) walkPackages(fn func(pkg *packages.Package)) {
+	ld.Lock()
+	pkgs := make([]*packages.Package, len(ld.packages))
+	i := 0
+	for _, v := range ld.packages {
+		pkgs[i] = v
+		i++
+	}
+	ld.Unlock()
+	sort.Slice(pkgs, func(i, j int) bool {
+		return pkgs[i].PkgPath < pkgs[j].PkgPath
+	})
+	for _, pkg := range pkgs {
+		fn(pkg)
+	}
+}
