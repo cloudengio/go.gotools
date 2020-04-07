@@ -49,6 +49,9 @@ func TestFunctions(t *testing.T) {
 		filepath.Join("data", "functions.go")+": data",
 		filepath.Join("data", "functions_more.go")+": data",
 	)
+
+	compareSlices(t, listPackages(locator),
+		[]string{"cloudeng.io/go/locate/testdata/data"})
 }
 
 func TestFunctionsAndInterfaces(t *testing.T) {
@@ -109,4 +112,10 @@ func TestFunctionDecls(t *testing.T) {
 	}
 	compareSlices(t, start, startAt)
 	compareSlices(t, stop, stopAt)
+
+	compareSlices(t, listPackages(locator),
+		[]string{
+			"cloudeng.io/go/locate/testdata/data",
+			"cloudeng.io/go/locate/testdata/impl",
+		})
 }

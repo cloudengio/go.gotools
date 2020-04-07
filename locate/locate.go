@@ -165,15 +165,20 @@ func (t *T) AddComments(comments ...string) {
 func (t *T) Do(ctx context.Context) error {
 	interfaces := dedup(t.interfacePackages)
 	functions := dedup(t.functionPackages)
-	packages, err := listPackages(ctx, t.implementationPackages)
-	if err != nil {
-		return err
+	var packages []string
+	if len(t.implementationPackages) > 0 {
+		var err error
+		packages, err = listPackages(ctx, t.implementationPackages)
+		if err != nil {
+			return err
+		}
 	}
 	packages = dedup(packages)
 	allPackages, err := packagesToLoad(ctx, interfaces, functions, packages)
 	if err != nil {
 		return err
 	}
+
 	comments := dedup(t.commentExpressions)
 	if err := t.loader.loadPaths(allPackages); err != nil {
 		return err

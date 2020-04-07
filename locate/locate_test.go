@@ -51,6 +51,14 @@ func listFiles(locator *locate.T) []string {
 	return out
 }
 
+func listPackages(locator *locate.T) []string {
+	out := []string{}
+	locator.WalkPackages(func(pkg *packages.Package) {
+		out = append(out, pkg.PkgPath)
+	})
+	return out
+}
+
 func compareLocations(t *testing.T, locations []string, prefixes, suffixes []string) {
 	loc := errors.Caller(2, 1)
 	if got, want := len(locations), len(suffixes); got != want {

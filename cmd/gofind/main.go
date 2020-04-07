@@ -9,6 +9,7 @@ import (
 	"os"
 	"regexp"
 
+	"cloudeng.io/cmdutil/flags"
 	"cloudeng.io/go/locate"
 	"cloudeng.io/go/locate/locateutil"
 	"golang.org/x/tools/go/packages"
@@ -68,8 +69,7 @@ func main() {
 	ctx := context.Background()
 	flag.Parse()
 
-	// Only one of these flags can be used.
-	if multiple(CommentFlag, FunctionFlag, InterfaceFlag) {
+	if !flags.ExactlyOneSet(CommentFlag, FunctionFlag, InterfaceFlag) {
 		exit("only one of --comments, --functions or --interfaces can be set")
 	}
 	var err error
