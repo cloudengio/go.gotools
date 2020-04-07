@@ -1,0 +1,21 @@
+packages:
+  - "v.io/x/ref/runtime/internal/naming/namespace"
+annotators:
+  - type: cloudeng.io/go/cmd/goannotate/annotators.AddLogCall
+    interfaces:
+      - "v.io/v23/namespace"
+    functions:
+    contextType: v.io/v23/context.T
+    import: v.io/x/ref/lib/apilog
+    function: apilog.LogCallf2
+    ignoreEmptyFunctions: true
+  - type: cloudeng.io/go/cmd/goannotate/annotators.RmLogCall
+    interfaces:
+      - "v.io/v23/namespace"
+    functions:
+    import: v.io/x/ref/lib/apilog
+    function: apilog.LogCallf2
+options:
+  concurrency: 0
+debug:
+  cpu_profile:
