@@ -8,3 +8,5 @@ It contains the following submodules, each of which can be imported and
 versioned independently.
 
 - [locate](locate/README.md)
+- [cmd/golocate]
+- [cmd/goannotate]

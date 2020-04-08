@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
 const TagName = "annotator"
@@ -59,10 +61,12 @@ func Describe(t interface{}, msg string) (string, error) {
 	if typ.Kind() != reflect.Struct {
 		return "", fmt.Errorf("%T is not a struct", t)
 	}
-	out := strings.Builder{}
+	out := &strings.Builder{}
 	out.WriteString(typ.PkgPath() + "." + typ.Name() + ":\n")
 	out.WriteString(msg)
 	out.WriteString("\nThe available configuration fields are:\n")
 	out.WriteString(formatTags(typ))
+	enc := yaml.NewEncoder(out)
+	enc.Encode(t)
 	return out.String(), nil
 }

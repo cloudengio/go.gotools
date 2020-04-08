@@ -15,27 +15,36 @@ import (
 )
 
 type RmLogCall struct {
-	Type        string   `annotator:"name of annotator."`
+	Type        string   `annotator:"name of annotator type."`
+	Name        string   `annotator:"name of annotator configuration."`
 	Interfaces  []string `annotator:"list of interfaces whose implementations are to have logging function calls removed from."`
 	Functions   []string `annotator:"list of functionms that are to have function calls removed from."`
 	Logcall     string   `annotator:"the logging function call to be removed"`
 	Comment     string   `annotator:"optional comment that must appear in the comments associated with the function call if it is to be removed."`
 	Deferred    bool     `annotator:"if set requires that the function to be removed must be defered."`
-	Concurrency int      `concurrency:"the number of goroutines to use, zero for a sensible default."`
+	Concurrency int      `annotator:"the number of goroutines to use, zero for a sensible default."`
 }
 
 func init() {
 	Register(&RmLogCall{})
 }
 
+// New implements annotators.T.
+func (rc *RmLogCall) New(name string) T {
+	return &RmLogCall{Name: name}
+}
+
+// Unmarshal implements annotators.T.
 func (rc *RmLogCall) Unmarshal(buf []byte) error {
 	return yaml.Unmarshal(buf, rc)
 }
 
+// Describe implements annotators.T.
 func (rc *RmLogCall) Describe() string {
 	return MustDescribe(rc, "an annotator that removes instances of calls to functions.")
 }
 
+// Do implements annotators.T.
 func (rc *RmLogCall) Do(ctx context.Context, pkgs []string) error {
 	locator := locate.New(
 		concurrencyOpt(rc.Concurrency),

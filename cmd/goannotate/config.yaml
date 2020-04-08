@@ -1,7 +1,16 @@
 packages:
+  # packages specifies a list of packaages to be annotated. It is possible
+  # to use go list syntax, e.g. v.io/...
   - "v.io/x/ref/runtime/internal/naming/namespace"
 annotators:
+  # annotators contains an entry for each supported annotator. The configuration
+  # for annotator depends on the annotator itself except that all annotators
+  # must have a 'type' key that names the go type of tha annotator. Each
+  # annotator must be compiled in to the goannotate binary priort to it
+  # being usable here. The --list command will provide documentation on
+  # the current set of compiled in annotators.
   - type: cloudeng.io/go/cmd/goannotate/annotators.AddLogCall
+    name: vanadium-add-logcall
     interfaces:
       - "v.io/v23/namespace"
     functions:
@@ -10,6 +19,7 @@ annotators:
     logcall: apilog.LogCallf2
     ignoreEmptyFunctions: true
   - type: cloudeng.io/go/cmd/goannotate/annotators.RmLogCall
+    name: vanadium-rm-logcall
     interfaces:
       - "v.io/v23/namespace"
     functions:
@@ -17,7 +27,13 @@ annotators:
     comment: "gologcop: DO NOT EDIT, MUST BE FIRST STATEMENT"
     deferred: true
   - type: cloudeng.io/go/cmd/goannotate/annotators.EnsureCopyright
+    name: personal-copyright
     copyright: "// Copyright 2020 Cosmos Nicolaou. All rights reserved.
+// Use of this source code is governed by the Apache-2.0
+// license that can be found in the LICENSE file."
+  - type: cloudeng.io/go/cmd/goannotate/annotators.EnsureCopyright
+    name: cloudeng-copyright
+    copyright: "// Copyright 2020 cloudeng llc. All rights reserved.
 // Use of this source code is governed by the Apache-2.0
 // license that can be found in the LICENSE file."
 options:
