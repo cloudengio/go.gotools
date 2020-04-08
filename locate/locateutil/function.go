@@ -78,3 +78,71 @@ func findFuncOrMethodDecl(fn *types.Func, file *ast.File) *ast.FuncDecl {
 	}
 	return nil
 }
+
+type funcVisitor struct {
+	callname string
+	deferred bool
+	nodes    []ast.Node
+}
+
+func callMatches(callexpr *ast.CallExpr, callname string) bool {
+	switch id := callexpr.Fun.(type) {
+	case *ast.Ident:
+		return id.String() == callname
+	case *ast.SelectorExpr:
+		if sel, ok := id.X.(*ast.Ident); ok {
+			return (sel.String() + "." + id.Sel.String()) == callname
+		}
+	case *ast.CallExpr:
+		r := callMatches(id, callname)
+		return r
+	}
+	return false
+}
+
+func (v *funcVisitor) Visit(node ast.Node) ast.Visitor {
+	if node == nil {
+		return nil
+	}
+	switch n := node.(type) {
+	case *ast.DeferStmt:
+		if !v.deferred {
+			return nil
+		}
+		if callMatches(n.Call, v.callname) {
+			v.nodes = append(v.nodes, node)
+		}
+	case *ast.ExprStmt:
+		if v.deferred {
+			return nil
+		}
+		call, ok := n.X.(*ast.CallExpr)
+		if !ok {
+			return nil
+		}
+		if callMatches(call, v.callname) {
+			v.nodes = append(v.nodes, node)
+		}
+	}
+	return v
+}
+
+// FunctionCalls determines if the supplied function declaration contains a call
+// 'callname' where callname is either a function name or a selector (eg. foo.bar).
+// If deferred is true the function call must be defer'ed.
+func FunctionCalls(decl *ast.FuncDecl, callname string, deferred bool) []ast.Node {
+	if !HasBody(decl) {
+		return nil
+	}
+	v := &funcVisitor{
+		callname: callname,
+		deferred: deferred,
+	}
+	ast.Walk(v, decl)
+	return v.nodes
+}
+
+// HasBody returns true of the function has a body.
+func HasBody(decl *ast.FuncDecl) bool {
+	return len(decl.Body.List) > 0
+}

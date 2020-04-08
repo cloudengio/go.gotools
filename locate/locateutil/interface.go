@@ -32,8 +32,11 @@ func InterfaceType(typ types.Type) *types.Interface {
 
 // IsInterfaceDefinition returns the interface type that the suplied object
 // defines in the specified package, if any. This specifically excludes
-// embedded types which are defined in other packages.
+// embedded types which are defined in other packages and anonymous interfaces.
 func IsInterfaceDefinition(pkg *packages.Package, obj types.Object) *types.Interface {
+	if obj == nil {
+		return nil
+	}
 	if _, ok := obj.(*types.TypeName); !ok {
 		return nil
 	}

@@ -7,14 +7,19 @@ annotators:
     functions:
     contextType: v.io/v23/context.T
     import: v.io/x/ref/lib/apilog
-    function: apilog.LogCallf2
+    logcall: apilog.LogCallf2
     ignoreEmptyFunctions: true
   - type: cloudeng.io/go/cmd/goannotate/annotators.RmLogCall
     interfaces:
       - "v.io/v23/namespace"
     functions:
-    import: v.io/x/ref/lib/apilog
-    function: apilog.LogCallf2
+    logcall: apilog.LogCallf
+    comment: "gologcop: DO NOT EDIT, MUST BE FIRST STATEMENT"
+    deferred: true
+  - type: cloudeng.io/go/cmd/goannotate/annotators.EnsureCopyright
+    copyright: "// Copyright 2020 Cosmos Nicolaou. All rights reserved.
+// Use of this source code is governed by the Apache-2.0
+// license that can be found in the LICENSE file."
 options:
   concurrency: 0
 debug:
