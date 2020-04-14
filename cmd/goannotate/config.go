@@ -14,9 +14,8 @@ type Debug struct {
 }
 
 type Config struct {
-	Packages   []string          `yam:"packages"`
-	Annotators []annotators.Spec `yam:"annotators"`
-	Debug      Debug             `yam:"debug"`
+	Annotations []annotators.Spec `yam:"annotations"`
+	Debug       Debug             `yam:"debug"`
 }
 
 func ConfigFromFile(filename string) (*Config, error) {

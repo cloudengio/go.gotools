@@ -27,8 +27,8 @@ func TestComments(t *testing.T) {
 		deferred    bool
 		first, last string
 	}{
-		{false, "functions.go:12:2", "functionsgo:14:19"}, // functinns.HasCall
-		{true, "functions.go:18:2", "functions:20:19"},    // functions.HasDefer
+		{false, "functions.go:12:2", "functions.go:14:19"}, // functinns.HasCall
+		{true, "functions.go:18:2", "functions.go:20:19"},  // functions.HasDefer
 	}
 
 	for i, fn := range fns {

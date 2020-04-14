@@ -8,37 +8,72 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"cloudeng.io/errors"
+	"cloudeng.io/path/cloudpath"
 	"cloudeng.io/text/edit"
 )
 
-func applyEdits(ctx context.Context, edits map[string][]edit.Delta) error {
+func computeOutputs(writeDir string, edits map[string][]edit.Delta) map[string]string {
+	outputs := map[string]string{}
+	if len(writeDir) == 0 || len(edits) == 0 {
+		for k := range edits {
+			outputs[k] = k
+		}
+		return outputs
+	}
+	var prefix string
+	if len(edits) > 1 {
+		filepaths := make([]cloudpath.T, 0, len(edits))
+		for k := range edits {
+			filepaths = append(filepaths, cloudpath.Split(k, filepath.Separator))
+		}
+		lcp := cloudpath.LongestCommonPrefix(filepaths)
+		prefix = lcp.Join(filepath.Separator)
+	} else {
+		// no common prefix, so just use the basename of the supplied file.
+		for k := range edits {
+			prefix = filepath.Dir(k)
+			break
+		}
+	}
+	for k := range edits {
+		outputs[k] = filepath.Join(writeDir, strings.TrimPrefix(k, prefix))
+	}
+	return outputs
+}
+
+func applyEdits(ctx context.Context, outputs map[string]string, edits map[string][]edit.Delta) error {
 	errs := &errors.M{}
 	for file, edits := range edits {
-		if len(edits) > 0 {
-			fmt.Printf("%v\n", file)
-		}
+		fmt.Println(file)
 		for _, edit := range edits {
 			Verbosef("\t%s: %s: %.30s...\n", file, edit, edit.Text())
 		}
-		if err := editFile(ctx, file, edits); err != nil {
+		output := outputs[file]
+		if len(output) == 0 {
+			output = file
+		} else {
+			dir := filepath.Dir(output)
+			if err := os.MkdirAll(dir, 0700); err != nil {
+				return fmt.Errorf("failed to create dir %v ", dir)
+			}
+		}
+		if err := editFile(ctx, file, output, edits); err != nil {
 			errs.Append(fmt.Errorf("failed to edit file: %v: %v", file, err))
 		}
 	}
-	if err := errs.Err(); err != nil {
-		return fmt.Errorf("failed to edit files: %v\n", err)
-	}
-	return nil
+	return errs.Err()
 }
 
-func editFile(ctx context.Context, name string, deltas []edit.Delta) error {
-	info, err := os.Stat(name)
+func editFile(ctx context.Context, src, dst string, deltas []edit.Delta) error {
+	info, err := os.Stat(src)
 	if err != nil {
 		return err
 	}
-	buf, err := ioutil.ReadFile(name)
+	buf, err := ioutil.ReadFile(src)
 	if err != nil {
 		return err
 	}
@@ -47,17 +82,17 @@ func editFile(ctx context.Context, name string, deltas []edit.Delta) error {
 	cmd.Stdin = bytes.NewBuffer(buf)
 	out, err := cmd.Output()
 	if err != nil {
+		stderr := string(err.(*exec.ExitError).Stderr)
 		// This is most likely because the edit messed up the go code
 		// and goimports is unhappy with it as its input. To help with
 		// debugging write the edited code to a temp file.
-		if Verbose {
-			if tmpfile, err := ioutil.TempFile("", "annotate-"); err == nil {
-				io.Copy(tmpfile, bytes.NewBuffer(buf))
-				tmpfile.Close()
-				fmt.Printf("wrote modified contents of %v to %v\n", name, tmpfile.Name())
-			}
+		if tmpfile, err := ioutil.TempFile("", "annotate-"); err == nil {
+			io.Copy(tmpfile, bytes.NewBuffer(buf))
+			tmpfile.Close()
+			fmt.Printf("wrote modified contents of %v to %v\n", src, tmpfile.Name())
+			fmt.Println(stderr)
 		}
 		return fmt.Errorf("%v: %v", strings.Join(cmd.Args, " "), err)
 	}
-	return ioutil.WriteFile(name, out, info.Mode().Perm())
+	return ioutil.WriteFile(dst, out, info.Mode().Perm())
 }

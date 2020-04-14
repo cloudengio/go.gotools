@@ -16,7 +16,8 @@ import (
 
 type RmLogCall struct {
 	Type        string   `annotator:"name of annotator type."`
-	Name        string   `annotator:"name of annotator configuration."`
+	Name        string   `annotator:"name of annotation."`
+	Packages    []string `annotator:"packages to be annotated"`
 	Interfaces  []string `annotator:"list of interfaces whose implementations are to have logging function calls removed from."`
 	Functions   []string `annotator:"list of functionms that are to have function calls removed from."`
 	Logcall     string   `annotator:"the logging function call to be removed"`
@@ -29,23 +30,23 @@ func init() {
 	Register(&RmLogCall{})
 }
 
-// New implements annotators.T.
-func (rc *RmLogCall) New(name string) T {
+// New implements annotators.Annotator.
+func (rc *RmLogCall) New(name string) Annotation {
 	return &RmLogCall{Name: name}
 }
 
-// Unmarshal implements annotators.T.
-func (rc *RmLogCall) Unmarshal(buf []byte) error {
+// UnmarshalYAML implements annotators.Annotation.
+func (rc *RmLogCall) UnmarshalYAML(buf []byte) error {
 	return yaml.Unmarshal(buf, rc)
 }
 
-// Describe implements annotators.T.
+// Describe implements annotators.Annotation.
 func (rc *RmLogCall) Describe() string {
 	return MustDescribe(rc, "an annotator that removes instances of calls to functions.")
 }
 
-// Do implements annotators.T.
-func (rc *RmLogCall) Do(ctx context.Context, pkgs []string) error {
+// Do implements annotators.Annotation.
+func (rc *RmLogCall) Do(ctx context.Context, root string, pkgs []string) error {
 	locator := locate.New(
 		concurrencyOpt(rc.Concurrency),
 		locate.Trace(Verbosef),
@@ -54,7 +55,7 @@ func (rc *RmLogCall) Do(ctx context.Context, pkgs []string) error {
 	locator.AddInterfaces(rc.Interfaces...)
 	locator.AddFunctions(rc.Functions...)
 	locator.AddPackages(pkgs...)
-	Verbosef("locating functions to have a logcall annotation removed...")
+	Verbosef("locating functions to have a logcall annotation removal...")
 	if err := locator.Do(ctx); err != nil {
 		return fmt.Errorf("failed to locate functions and/or interface implementations: %v\n", err)
 	}
@@ -76,15 +77,15 @@ func (rc *RmLogCall) Do(ctx context.Context, pkgs []string) error {
 			start = node.Pos()
 			end = node.End()
 			cgs := cmap[node]
-			if locateutil.CommentGroupsContain(cgs, rc.Comment) {
-
-				cFirst, cLast := locateutil.CommentGroupBounds(cgs)
-				if cFirst < start {
-					start = cFirst
-				}
-				if cLast > end {
-					end = cLast
-				}
+			if !locateutil.CommentGroupsContain(cgs, rc.Comment) {
+				continue
+			}
+			cFirst, cLast := locateutil.CommentGroupBounds(cgs)
+			if cFirst < start {
+				start = cFirst
+			}
+			if cLast > end {
+				end = cLast
 			}
 			from := pkg.Fset.PositionFor(start, false)
 			to := pkg.Fset.PositionFor(end, false)
@@ -93,5 +94,5 @@ func (rc *RmLogCall) Do(ctx context.Context, pkgs []string) error {
 			Verbosef("delete: %v...%v\n", from, to)
 		}
 	})
-	return applyEdits(ctx, edits)
+	return applyEdits(ctx, computeOutputs(root, edits), edits)
 }

@@ -17,6 +17,7 @@ import (
 var (
 	ConfigFileFlag string
 	AnnotationFlag string
+	WriteDirFlag   string
 	ListFlag       bool
 	VerboseFlag    bool
 	ProgressFlag   bool
@@ -27,6 +28,7 @@ const defaultConfigFile = "$HOME/.goannoate/config.yaml"
 func init() {
 	flag.StringVar(&ConfigFileFlag, "config", os.ExpandEnv(defaultConfigFile), "yaml configuration file")
 	flag.StringVar(&AnnotationFlag, "annotation", "", "annotation to be applied")
+	flag.StringVar(&WriteDirFlag, "write-dir", "", "if set, specify an alternate directory to write modified files to, otherwise files are modified in place.")
 	flag.BoolVar(&ListFlag, "list", false, "list available annotations")
 	flag.BoolVar(&VerboseFlag, "verbose", false, "display verbose debug info")
 }
@@ -94,7 +96,7 @@ func main() {
 	if an == nil {
 		cmdutil.Exit("unrecognised annotation: %v\n%v\n", AnnotationFlag, available())
 	}
-	if err := an.Do(ctx, config.Packages); err != nil {
+	if err := an.Do(ctx, WriteDirFlag, flag.Args()); err != nil {
 		cmdutil.Exit("%v", err)
 	}
 }

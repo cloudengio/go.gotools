@@ -90,7 +90,7 @@ func TestEmbeddedInterfaces(t *testing.T) {
 		filepath.Join("data", "embedded", "pkg", "interface.go") + ":3:6",
 	})
 	compareFiles(t, listFiles(locator),
-		filepath.Join("data", "embeddedç", "embedded.go")+": embedded",
+		filepath.Join("data", "embedded", "embedded.go")+": embedded",
 		filepath.Join("data", "embedded", "pkg", "interface.go")+": pkg",
 	)
 }
