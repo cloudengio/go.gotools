@@ -1,4 +1,4 @@
-package annotations
+package derive
 
 import (
 	"go/ast"

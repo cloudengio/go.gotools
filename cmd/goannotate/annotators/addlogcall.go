@@ -11,7 +11,7 @@ import (
 	"text/template"
 
 	"cloudeng.io/errors"
-	"cloudeng.io/go/annotations"
+	"cloudeng.io/go/derive"
 	"cloudeng.io/go/locate"
 	"cloudeng.io/go/locate/locateutil"
 	"cloudeng.io/text/edit"
@@ -70,7 +70,7 @@ defer <call>(ctx, "<function-name>", "<location>", "<format>", <parameters>....)
 
 The actual type of the context is determied by the ContextType configuration
 field. The parameters and named results are captured and passed to the logging
-call according to cloudeng.io/go/annotations.ArgsForParams and ArgsForResults.
+call according to cloudeng.io/go/derive.ArgsForParams and ArgsForResults.
 The logging function must return a function that is defered to capture named
 results and log them on function exit.
 `)
@@ -200,12 +200,12 @@ func (lc *AddLogCall) alreadyAnnotated(fset *token.FileSet, file *ast.File, fn *
 func (lc *AddLogCall) annotationForFunc(fset *token.FileSet, fn *types.Func, decl *ast.FuncDecl) (string, string, error) {
 	sig := fn.Type().(*types.Signature)
 	var ignore []int
-	ctxParam, hasContext := annotations.HasCustomContext(sig, lc.ContextType)
+	ctxParam, hasContext := derive.HasCustomContext(sig, lc.ContextType)
 	if hasContext {
 		ignore = append(ignore, 0)
 	}
-	params, paramArgs := annotations.ArgsForParams(sig, ignore...)
-	results, resultArgs := annotations.ArgsForResults(sig)
+	params, paramArgs := derive.ArgsForParams(sig, ignore...)
+	results, resultArgs := derive.ArgsForResults(sig)
 	if !hasContext {
 		ctxParam = "nil"
 	}

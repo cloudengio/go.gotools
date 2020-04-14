@@ -1,4 +1,4 @@
-package annotations_test
+package derive_test
 
 import (
 	"context"
@@ -8,12 +8,12 @@ import (
 	"testing"
 
 	"cloudeng.io/errors"
-	"cloudeng.io/go/annotations"
+	"cloudeng.io/go/derive"
 	"cloudeng.io/go/locate"
 	"golang.org/x/tools/go/packages"
 )
 
-const testdata = "cloudeng.io/go/annotations/testdata/examples"
+const testdata = "cloudeng.io/go/derive/testdata/examples"
 
 func TestFormatting(t *testing.T) {
 	ctx := context.Background()
@@ -31,18 +31,18 @@ func TestFormatting(t *testing.T) {
 
 	locator.WalkFunctions(func(name string, pkg *packages.Package, file *ast.File, fn *types.Func, decl *ast.FuncDecl, implemented []string) {
 		signature := fn.Type().(*types.Signature)
-		spec, args := annotations.ArgsForParams(signature)
+		spec, args := derive.ArgsForParams(signature)
 		parameters = append(parameters, formatted{spec, strings.Join(args, ", ")})
-		if ctxArg, ok := annotations.HasContext(signature); ok {
+		if ctxArg, ok := derive.HasContext(signature); ok {
 			// ignore context.Context at positiohn 0.
-			spec, args = annotations.ArgsForParams(signature, 0)
+			spec, args = derive.ArgsForParams(signature, 0)
 			args = append([]string{ctxArg}, args...)
 		} else {
-			spec, args = annotations.ArgsForParams(signature)
+			spec, args = derive.ArgsForParams(signature)
 		}
 		parametersContext = append(parametersContext,
 			formatted{spec, strings.Join(args, ", ")})
-		spec, args = annotations.ArgsForResults(signature)
+		spec, args = derive.ArgsForResults(signature)
 		results = append(results, formatted{spec, strings.Join(args, ", ")})
 	})
 
