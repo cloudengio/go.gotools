@@ -82,7 +82,10 @@ func editFile(ctx context.Context, src, dst string, deltas []edit.Delta) error {
 	cmd.Stdin = bytes.NewBuffer(buf)
 	out, err := cmd.Output()
 	if err != nil {
-		stderr := string(err.(*exec.ExitError).Stderr)
+		var stderr string
+		if execerr, ok := err.(*exec.ExitError); ok {
+			stderr = string(execerr.Stderr)
+		}
 		// This is most likely because the edit messed up the go code
 		// and goimports is unhappy with it as its input. To help with
 		// debugging write the edited code to a temp file.
@@ -90,7 +93,9 @@ func editFile(ctx context.Context, src, dst string, deltas []edit.Delta) error {
 			io.Copy(tmpfile, bytes.NewBuffer(buf))
 			tmpfile.Close()
 			fmt.Printf("wrote modified contents of %v to %v\n", src, tmpfile.Name())
-			fmt.Println(stderr)
+			if len(stderr) > 0 {
+				fmt.Println(stderr)
+			}
 		}
 		return fmt.Errorf("%v: %v", strings.Join(cmd.Args, " "), err)
 	}

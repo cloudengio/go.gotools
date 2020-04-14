@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -16,7 +17,10 @@ func execit(t *testing.T, bin string, args ...string) string {
 	out, err := cmd.Output()
 	if err != nil {
 		cl := strings.Join(cmd.Args, " ")
-		stderr := string(err.(*exec.ExitError).Stderr)
+		var stderr string
+		if execerr, ok := err.(*exec.ExitError); ok {
+			stderr = string(execerr.Stderr)
+		}
 		t.Fatalf("failed to run: %v: %v: %v", cl, err, stderr)
 	}
 	return string(out)
@@ -50,7 +54,9 @@ func TestCopyrightIsPresent(t *testing.T) {
 	out, tmpdir := runit(t, "personal-apache", "cloudeng.io/go/cmd/goannotate/annotators/testdata/copyright")
 	defer os.RemoveAll(tmpdir)
 	original := list(t, filepath.Join("annotators", "testdata", "copyright"))
-	if got, want := strings.TrimSuffix(out, "\n"), strings.Join(original, "\n"); got != want {
+	lines := strings.Split(strings.TrimSuffix(string(out), "\n"), "\n")
+	sort.Strings(lines)
+	if got, want := strings.Join(lines, "\n"), strings.Join(original, "\n"); got != want {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
