@@ -110,8 +110,7 @@ func main() {
 func describe(names []string) string {
 	out := strings.Builder{}
 	for _, name := range names {
-		an := annotators.Lookup(name)
-		out.WriteString(an.Describe())
+		out.WriteString(annotators.Description(name))
 		out.WriteString("\n")
 	}
 	return out.String()

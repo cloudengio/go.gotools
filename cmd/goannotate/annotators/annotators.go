@@ -66,8 +66,8 @@ func Registered() []string {
 	return av
 }
 
-// DescribeX returns the description for the annotator or annotation.
-func DescribeX(name string) string {
+// Description returns the description for the annotator or annotation.
+func Description(name string) string {
 	if an, ok := configurations[name]; ok {
 		return an.Describe()
 
