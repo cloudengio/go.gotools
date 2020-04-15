@@ -1,3 +1,7 @@
+// Copyright 2020 cloudeng llc. All rights reserved.
+// Use of this source code is governed by the Apache-2.0
+// license that can be found in the LICENSE file.
+
 // Package locate provides a means for obtaining the location of comments,
 // functions and implementations of interfaces in go source code,
 // with a view to annotating that source code programmatically.

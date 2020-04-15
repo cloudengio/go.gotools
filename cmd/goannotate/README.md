@@ -26,4 +26,3 @@ the configuration fields and displaying their values.
 `goannotate --list` will list all available annotations.
 
 New annotations are added via the config file.
-

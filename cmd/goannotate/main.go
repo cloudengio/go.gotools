@@ -1,3 +1,7 @@
+// Copyright 2020 cloudeng llc. All rights reserved.
+// Use of this source code is governed by the Apache-2.0
+// license that can be found in the LICENSE file.
+
 package main
 
 import (
@@ -19,16 +23,18 @@ var (
 	AnnotationFlag string
 	WriteDirFlag   string
 	ListFlag       bool
+	ListConfigFlag bool
 	VerboseFlag    bool
 )
 
-const defaultConfigFile = "$HOME/.goannoate/config.yaml"
+const defaultConfigFile = "config.yaml"
 
 func init() {
 	flag.StringVar(&ConfigFileFlag, "config", os.ExpandEnv(defaultConfigFile), "yaml configuration file")
 	flag.StringVar(&AnnotationFlag, "annotation", "", "annotation to be applied")
 	flag.StringVar(&WriteDirFlag, "write-dir", "", "if set, specify an alternate directory to write modified files to, otherwise files are modified in place.")
-	flag.BoolVar(&ListFlag, "list", false, "list available annotations")
+	flag.BoolVar(&ListFlag, "list", false, "list available annotators")
+	flag.BoolVar(&ListConfigFlag, "list-config", false, "list available annotations and their configurations")
 	flag.BoolVar(&VerboseFlag, "verbose", false, "display verbose debug info")
 }
 
@@ -59,6 +65,11 @@ func main() {
 	flag.Parse()
 	annotators.Verbose = VerboseFlag
 
+	if ListFlag {
+		fmt.Println(describe(annotators.Registered()))
+		return
+	}
+
 	config, err := ConfigFromFile(ConfigFileFlag)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -66,8 +77,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if ListFlag {
-		fmt.Println(available())
+	if ListConfigFlag {
+		fmt.Println(describe(annotators.Available()))
 		return
 	}
 
@@ -93,18 +104,17 @@ func main() {
 	}
 	an := annotators.Lookup(names[0])
 	if an == nil {
-		cmdutil.Exit("unrecognised annotation: %v\n%v\n", AnnotationFlag, available())
+		cmdutil.Exit("unrecognised annotation: %v\n%v\n", AnnotationFlag, describe(annotators.Available()))
 	}
 	if err := an.Do(ctx, WriteDirFlag, flag.Args()); err != nil {
 		cmdutil.Exit("%v", err)
 	}
 }
 
-func available() string {
+func describe(names []string) string {
 	out := strings.Builder{}
-	for _, name := range annotators.Available() {
-		an := annotators.Lookup(name)
-		out.WriteString(an.Describe())
+	for _, name := range names {
+		out.WriteString(annotators.Description(name))
 		out.WriteString("\n")
 	}
 	return out.String()

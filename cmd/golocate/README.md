@@ -22,3 +22,4 @@ go run . --comments='.*' ./...
 The output of `golocate` is limited right now but is easily extended as
 uses cases arise. Currently locating interface implementations is the
 most useful.
+
