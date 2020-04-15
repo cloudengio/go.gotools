@@ -10,11 +10,7 @@ jobs:
           name: build
           command: |
             set -eux -o pipefail 
-            for dir in $(find * -type d -maxdepth 0); do
-              here="$(pwd)"
-              cd "${dir}"
-              echo $dir
-              go get -v -t -d ./...
-              go test -v ./...
-              cd "${here}"
-            done
+            go build ./cmd/goannotate/annotators/testdata/impl
+            go build cloudeng.io/go/cmd/goannotate/annotators/testdata/impl
+            go get -v -t -d ./...
+            go test -v ./...
