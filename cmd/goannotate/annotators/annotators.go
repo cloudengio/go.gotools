@@ -33,6 +33,7 @@ type Annotator interface {
 	// New creates a new instance of T. It used to create new configurations
 	// as specified in config files, namely an 'annotation'
 	New(name string) Annotation
+	Describe() string
 }
 
 // Annotation represents a configured instance of an Annotator.
@@ -55,7 +56,29 @@ func Register(annotator Annotator) {
 	annotators[name] = annotator
 }
 
-// Available lists the types of all available annotations.
+// Registered lists all registered annotatators.
+func Registered() []string {
+	av := []string{}
+	for k := range annotators {
+		av = append(av, k)
+	}
+	sort.Strings(av)
+	return av
+}
+
+// DescribeX returns the description for the annotator or annotation.
+func DescribeX(name string) string {
+	if an, ok := configurations[name]; ok {
+		return an.Describe()
+
+	}
+	if an, ok := annotators[name]; ok {
+		return an.Describe()
+	}
+	return ""
+}
+
+// Available lists all available annotations.
 func Available() []string {
 	av := []string{}
 	for k := range configurations {
@@ -66,8 +89,8 @@ func Available() []string {
 }
 
 // Lookup returns the annotation with the specifed typeName, if any.
-func Lookup(typeName string) Annotation {
-	return configurations[typeName]
+func Lookup(name string) Annotation {
+	return configurations[name]
 }
 
 // Spec represents the yaml configuration for an annotation. It has a common
