@@ -1,0 +1,36 @@
+annotations:
+  - type: cloudeng.io/go/cmd/goannotate/annotators.AddLogCall
+    name: add
+    interfaces:
+      - "cloudeng.io/go/cmd/goannotate/annotators/testdata/api"
+    functions:
+      - "cloudeng.io/go/cmd/goannotate/annotators/testdata/impl.API"
+    contextType: context.Context
+    import: cloudeng.io/go/cmd/goannotate/annotators/testdata/apilog 
+    logcall: apilog.LogCallf
+    ignoreEmptyFunctions: true
+  - type: cloudeng.io/go/cmd/goannotate/annotators.RmLogCall
+    name: rmlegacy
+    interfaces:
+      - "cloudeng.io/go/cmd/goannotate/annotators/testdata/api"
+    functions:
+      - "cloudeng.io/go/cmd/goannotate/annotators/testdata/impl.API"
+    logcall: apilog.LogCallfLegacy
+    comment: "gologcop: DO NOT EDIT, MUST BE FIRST STATEMENT"
+    deferred: true
+  - type: cloudeng.io/go/cmd/goannotate/annotators.RmLogCall
+    name: rmlegacy-nodefer
+    interfaces:
+      - "cloudeng.io/go/cmd/goannotate/annotators/testdata/api"
+    functions:
+      - "cloudeng.io/go/cmd/goannotate/annotators/testdata/impl.API"
+    logcall: apilog.LogCallfLegacy
+    comment: "gologcop: DO NOT EDIT, MUST BE FIRST STATEMENT"
+    deferred: false
+  - type: cloudeng.io/go/cmd/goannotate/annotators.EnsureCopyrightAndLicense
+    name: personal-apache
+    copyright: "// Copyright 2020 Cosmos Nicolaou. All rights reserved."
+    license: "// Use of this source code is governed by the Apache-2.0\n
+// license that can be found in the LICENSE file."
+options:
+  concurrency: 1
