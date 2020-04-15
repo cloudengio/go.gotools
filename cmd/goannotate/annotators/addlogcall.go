@@ -138,8 +138,6 @@ func (lc *AddLogCall) Do(ctx context.Context, root string, pkgs []string) error 
 			end = file.Name.End()
 		}
 		pos := pkg.Fset.PositionFor(end, false)
-		if len(pos.Filename) == 0 {
-		}
 		delta := edit.InsertString(pos.Offset, importStatement)
 		edits[pos.Filename] = append(edits[pos.Filename], delta)
 		Verbosef("import: %v @ %v\n", lc.Import, pos)

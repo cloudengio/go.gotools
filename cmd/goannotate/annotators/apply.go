@@ -90,7 +90,7 @@ func editFile(ctx context.Context, src, dst string, deltas []edit.Delta) error {
 		// and goimports is unhappy with it as its input. To help with
 		// debugging write the edited code to a temp file.
 		if tmpfile, err := ioutil.TempFile("", "annotate-"); err == nil {
-			io.Copy(tmpfile, bytes.NewBuffer(buf))
+			_, _ = io.Copy(tmpfile, bytes.NewBuffer(buf))
 			tmpfile.Close()
 			fmt.Printf("wrote modified contents of %v to %v\n", src, tmpfile.Name())
 			if len(stderr) > 0 {

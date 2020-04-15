@@ -55,16 +55,6 @@ func exit(format string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func multiple(args ...string) bool {
-	set := 0
-	for _, a := range args {
-		if len(a) > 0 {
-			set++
-		}
-	}
-	return set > 1
-}
-
 func main() {
 	ctx := context.Background()
 	flag.Parse()

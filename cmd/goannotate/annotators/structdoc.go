@@ -67,6 +67,6 @@ func Describe(t interface{}, msg string) (string, error) {
 	out.WriteString("\nThe available configuration fields are:\n")
 	out.WriteString(formatTags(typ))
 	enc := yaml.NewEncoder(out)
-	enc.Encode(t)
-	return out.String(), nil
+	err := enc.Encode(t)
+	return out.String(), err
 }

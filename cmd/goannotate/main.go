@@ -20,7 +20,6 @@ var (
 	WriteDirFlag   string
 	ListFlag       bool
 	VerboseFlag    bool
-	ProgressFlag   bool
 )
 
 const defaultConfigFile = "$HOME/.goannoate/config.yaml"

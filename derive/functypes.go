@@ -1,21 +1,12 @@
 package derive
 
 import (
-	"go/ast"
 	"go/types"
 	"strings"
 )
 
 // ContextType is the standard go context type.
 const ContextType = "context.Context"
-
-func names(ids []*ast.Ident) []string {
-	r := make([]string, len(ids))
-	for _, id := range ids {
-		r = append(r, id.String())
-	}
-	return r
-}
 
 func implementsStringer(typ types.Type) bool {
 	ms := types.NewMethodSet(typ)

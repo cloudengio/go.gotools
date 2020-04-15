@@ -98,16 +98,6 @@ func (ld *loader) lookupFile(filename string) (*ast.File, ast.CommentMap, *packa
 	return d.ast, d.comments, d.pkg
 }
 
-func (ld *loader) astForPosition(path string, pos token.Pos) *ast.File {
-	pkg := ld.lookupPackage(path)
-	if pkg == nil {
-		return nil
-	}
-	position := pkg.Fset.PositionFor(pos, false)
-	ast, _, _ := ld.lookupFile(position.Filename)
-	return ast
-}
-
 func (ld *loader) position(path string, pos token.Pos) token.Position {
 	pkg := ld.lookupPackage(path)
 	if pkg == nil {
