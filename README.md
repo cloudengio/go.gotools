@@ -1,6 +1,6 @@
 # go.gotools
 
-[![CircleCI](https://circleci.com/gh/cloudengio/go.gotools.svg?style=svg)](https://circleci.com/gh/cloudengio/go.gotools)
+[![CircleCI](https://circleci.com/gh/cloudengio/go.gotools.svg?style=svg)](https://circleci.com/gh/cloudengio/go.gotools) [![Go Report Card](https://goreportcard.com/badge/cloudeng.io/go)](https://goreportcard.com/report/cloudeng.io/go)
 
 go tools and packages for manipulating go source code and
 generating documentation.
