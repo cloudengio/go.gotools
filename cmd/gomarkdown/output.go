@@ -1,3 +1,7 @@
+// Copyright 2020 cloudeng llc. All rights reserved.
+// Use of this source code is governed by the Apache-2.0
+// license that can be found in the LICENSE file.
+
 package main
 
 import (
@@ -8,7 +12,6 @@ import (
 	"go/doc"
 	"go/format"
 	"go/token"
-	"regexp"
 	"strings"
 	"text/template"
 
@@ -39,44 +42,60 @@ func filterGoGenerate(text string) string {
 	return out.String()
 }
 
-var exitStatusRE = regexp.MustCompile(`exit status \d+$`)
-
-func filterExitStatus(text string) string {
-	out := strings.Builder{}
-	sc := bufio.NewScanner(bytes.NewBufferString(text))
-	first := true
-	var prev string
-	for sc.Scan() {
-		if !first {
-			out.WriteString(prev)
-			out.WriteString("\n")
-		}
-		prev = sc.Text()
-		first = false
-	}
-	if !exitStatusRE.MatchString(prev) {
-		out.WriteString(prev)
-		out.WriteString("\n")
-	}
-	return out.String()
-}
-
 type outputState struct {
 	markdownGoCodeStart string
 	doc                 *doc.Package
 	pkg                 *packages.Package
+	options             outputOptions
 	tplFuncs            map[string]interface{}
 }
 
-func newOutputState(markdownFlavour, goPkgSite string, doc *doc.Package, pkg *packages.Package) *outputState {
+type outputOptions struct {
+	markdownFlavour string
+	goPkgSite       string
+	circleciProject string
+	goreportcard    bool
+}
+
+type outputOption func(o *outputOptions)
+
+func markdownFlavour(f string) outputOption {
+	return func(o *outputOptions) {
+		o.markdownFlavour = f
+	}
+}
+
+func goPkgSite(s string) outputOption {
+	return func(o *outputOptions) {
+		o.goPkgSite = s
+	}
+}
+
+func goreportcard(b bool) outputOption {
+	return func(o *outputOptions) {
+		o.goreportcard = b
+	}
+}
+
+func circleciProject(p string) outputOption {
+	return func(o *outputOptions) {
+		o.circleciProject = p
+	}
+}
+
+func newOutputState(doc *doc.Package, pkg *packages.Package, opts ...outputOption) *outputState {
 	st := &outputState{doc: doc, pkg: pkg}
-	switch markdownFlavour {
+	for _, fn := range opts {
+		fn(&st.options)
+	}
+	switch st.options.markdownFlavour {
 	case "github":
 		st.markdownGoCodeStart = "```go"
 	default:
 		st.markdownGoCodeStart = "```"
 	}
 	st.tplFuncs = map[string]interface{}{
+		"badges":           st.badges,
 		"codeStart":        st.codeStart,
 		"codeEnd":          st.codeEnd,
 		"comment":          st.comment,
@@ -87,7 +106,7 @@ func newOutputState(markdownFlavour, goPkgSite string, doc *doc.Package, pkg *pa
 		"value":            st.valueDecl,
 		"join":             strings.Join,
 	}
-	switch goPkgSite {
+	switch st.options.goPkgSite {
 	case "pkg.go.dev":
 		st.tplFuncs["packageLink"] = st.pkgGoDevPackageLink
 		st.tplFuncs["exampleLink"] = st.pkgGoDevExampleLink
@@ -95,20 +114,32 @@ func newOutputState(markdownFlavour, goPkgSite string, doc *doc.Package, pkg *pa
 		st.tplFuncs["packageLink"] = st.godocOrgPackageLink
 		st.tplFuncs["exampleLink"] = st.godocOrgExampleLink
 	default:
-		panic(fmt.Sprintf("unsupported go pkg site: %v", goPkgSite))
+		panic(fmt.Sprintf("unsupported go pkg site: %v", st.options.goPkgSite))
 	}
 	return st
+}
+
+func (st *outputState) badges() string {
+	var badges []string
+	if ci := st.options.circleciProject; len(ci) > 0 {
+		badge := fmt.Sprintf("[![CircleCI](https://circleci.com/gh/%v.svg?style=svg)](https://circleci.com/gh/%v)", ci, ci)
+		badges = append(badges, badge)
+	}
+	if st.options.goreportcard {
+		badge := fmt.Sprintf("[![Go Report Card](https://goreportcard.com/badge/%s)](https://goreportcard.com/report/%s)", st.pkg.PkgPath, st.pkg.PkgPath)
+		badges = append(badges, badge)
+	}
+	return strings.Join(badges, " ")
 }
 
 func (st *outputState) valueDecl(decl *ast.GenDecl) string {
 	switch decl.Tok {
 	case token.CONST, token.VAR:
-		if ns := len(decl.Specs); ns != 1 {
-			panic(fmt.Sprintf("unexpected # (%v) of Specs for const: %#v", ns, decl))
-		}
-		spec := decl.Specs[0].(*ast.ValueSpec)
 		out := &strings.Builder{}
-		format.Node(out, st.pkg.Fset, spec)
+		for _, spec := range decl.Specs {
+			format.Node(out, st.pkg.Fset, spec)
+			out.WriteString("\n")
+		}
 		return out.String()
 	}
 	return "unsupported"
@@ -173,7 +204,7 @@ func (st *outputState) outputPackage() (string, error) {
 	return out.String(), err
 }
 
-func (st *outputState) outputCommand(help string) (string, error) {
+func (st *outputState) outputCommand() (string, error) {
 	tpl, err := template.New("markdown").Funcs(st.tplFuncs).Parse(markdownCommandTemplate)
 	if err != nil {
 		return "", fmt.Errorf("failed to create template: %v", err)
@@ -183,23 +214,9 @@ func (st *outputState) outputCommand(help string) (string, error) {
 	return out.String(), err
 }
 
-func (st *outputState) outputGodoc(help string) (string, error) {
-	tpl, err := template.New("markdown").Funcs(st.tplFuncs).Parse(godocTemplate)
-	if err != nil {
-		return "", fmt.Errorf("failed to create template: %v", err)
-	}
-	tmp := struct {
-		Usage string
-	}{
-		Usage: help,
-	}
-	out := &strings.Builder{}
-	err = tpl.Execute(out, tmp)
-	return out.String(), err
-}
-
 var markdownPackageTemplate = `# {{packageLink}}
-
+{{if badges}}{{badges}}
+{{end}}
 {{codeStart}}
 import {{.ImportPath}}
 {{codeEnd}}
@@ -261,9 +278,4 @@ var markdownCommandTemplate = `# {{packageLink}}
 # Command {{.ImportPath}}
 
 {{comment 0 4 .Doc}}
-`
-
-var godocTemplate = `{{gocomment .Usage}}
-
-package main
 `

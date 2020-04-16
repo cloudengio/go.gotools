@@ -1,3 +1,7 @@
+// Copyright 2020 cloudeng llc. All rights reserved.
+// Use of this source code is governed by the Apache-2.0
+// license that can be found in the LICENSE file.
+
 package main
 
 import (
@@ -8,7 +12,6 @@ import (
 	"go/doc"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -19,21 +22,21 @@ import (
 )
 
 var (
-	markdownFlag      string
-	gopkgSiteFlag     string
-	mdOutputFlag      string
-	overwriteFlag     bool
-	generateGoDocFlag bool
-	goOutputFlag      string
+	markdownFlag        string
+	gopkgSiteFlag       string
+	mdOutputFlag        string
+	overwriteFlag       bool
+	goreportCardFlag    bool
+	circleciProjectFlag string
 )
 
 func init() {
 	flag.StringVar(&markdownFlag, "markdown", "github", "markdown style to use, currently only github is supported.")
 	flag.StringVar(&gopkgSiteFlag, "gopkg", "pkg.go.dev", "link to this site for full godoc and godoc examples")
+	flag.StringVar(&circleciProjectFlag, "circleci", "", "set to the circleci project to insert a circleci build badge")
+	flag.BoolVar(&goreportCardFlag, "goreportcard", false, "insert a link to goreportcard.com")
 	flag.StringVar(&mdOutputFlag, "md-output", "README.md", "name of markdown output file.")
 	flag.BoolVar(&overwriteFlag, "overwrite", false, "overwrite existing file.")
-	flag.BoolVar(&generateGoDocFlag, "gocmd", false, "generate a go file with the --help output of the command packages")
-	flag.StringVar(&goOutputFlag, "go-output", "cmdusage.go", "name of generated go file.")
 }
 
 func main() {
@@ -102,25 +105,16 @@ func main() {
 			examples = append(examples, tyeg.Examples...)
 		}
 		docPkg.Examples = examples
-		st := newOutputState(markdownFlag, gopkgSiteFlag, docPkg, pkg)
+		st := newOutputState(docPkg, pkg,
+			markdownFlavour(markdownFlag),
+			goPkgSite(gopkgSiteFlag),
+			goreportcard(goreportCardFlag),
+			circleciProject(circleciProjectFlag),
+		)
 		dir := dirForPackage(pkg)
 		var mdOutput string
 		if commands[name] {
-			help, err := helpText(ctx, name)
-			if err != nil {
-				errs.Append(err)
-				continue
-			}
-			if generateGoDocFlag {
-				out, err := st.outputCommand(filterExitStatus(help))
-				if err != nil {
-					errs.Append(err)
-					continue
-				}
-				errs.Append(writeGo(filepath.Join(dir, goOutputFlag), out))
-				continue
-			}
-			mdOutput, err = st.outputGodoc(filterExitStatus(help))
+			mdOutput, err = st.outputCommand()
 		} else {
 			mdOutput, err = st.outputPackage()
 		}
@@ -142,19 +136,6 @@ func dirForPackage(pkg *packages.Package) string {
 	return filepath.Dir(pkg.CompiledGoFiles[0])
 }
 
-func helpText(ctx context.Context, pkg string) (string, error) {
-	cmd := exec.CommandContext(ctx, "go", "run", pkg, "--help")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		if _, ok := err.(*exec.ExitError); ok {
-			// ignore exit errors.
-			return string(out), nil
-		}
-		return "", fmt.Errorf("failed to run %v: %v", strings.Join(cmd.Args, " "), err)
-	}
-	return string(out), nil
-}
-
 func writeAllowed(filename string) error {
 	if overwriteFlag {
 		return nil
@@ -170,13 +151,7 @@ func writeAllowed(filename string) error {
 }
 
 func writeMarkdown(filename string, text string) error {
-	if err := writeAllowed(filename); err != nil {
-		return err
-	}
-	return ioutil.WriteFile(filename, []byte(text), 0622)
-}
-
-func writeGo(filename string, text string) error {
+	fmt.Printf("writing: %v\n", filename)
 	if err := writeAllowed(filename); err != nil {
 		return err
 	}

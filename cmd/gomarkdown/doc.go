@@ -17,13 +17,13 @@ It mirrors the behaviour of go doc but producing markdown output instead.
 It is most useful for packages hosted on github to generate a README.md
 for each package or command.
 
-For commands, gomarkdown can also generate a go file containing a comment
-with the usage for that command, obtained by running it with --help.
-With this generated file in place, gomarkdown can generate a useful markdown
-file for the command.
-
 gomarkdown can be applied to multiple packages and will generate a README.md
 for each package in that package's directory.
+
+For example, the following will generate a README.md in every package and
+command under ./...
+
+  go run cloudeng.io/go/cmd/gomarkdown --overwrite ./...
 `
 
 func init() {

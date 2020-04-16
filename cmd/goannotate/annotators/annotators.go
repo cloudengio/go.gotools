@@ -15,6 +15,10 @@ import (
 )
 
 var (
+	FooBar = map[string]string{}
+)
+
+var (
 	Verbose        = false
 	Trace          = false
 	annotators     = map[string]Annotator{}
