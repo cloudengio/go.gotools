@@ -1,21 +1,30 @@
-# [main](https://pkg.go.dev/cloudeng.io/go/cmd/gomarkdown?tab=doc)
+# [cloudeng.io/go/cmd/gomarkdown](https://pkg.go.dev/cloudeng.io/go/cmd/gomarkdown?tab=doc)
+[![CircleCI](https://circleci.com/gh/cloudengio/go.gotools.svg?style=svg)](https://circleci.com/gh/cloudengio/go.gotools) [![Go Report Card](https://goreportcard.com/badge/cloudeng.io/go/cmd/gomarkdown)](https://goreportcard.com/report/cloudeng.io/go/cmd/gomarkdown)
 
-# Command cloudeng.io/go/cmd/gomarkdown
 
-Usage of gomarkdown:
+# Usage of `gomarkdown`
 
-gomarkdown is a utility for generating markdown from go source comments. It
+`gomarkdown` is a utility for generating markdown from go source comments. It
 mirrors the behaviour of go doc but producing markdown output instead. It is
-most useful for packages hosted on github to generate a README.md for each
-package or command.
+most useful for packages hosted on github since github will automatically
+render the README.md in each directory.
 
-gomarkdown can be applied to multiple packages and will generate a README.md
+`gomarkdown` can be applied to multiple packages and will generate a README.md
 for each package in that package's directory.
 
 For example, the following will generate a README.md in every package and
 command under ./...
 
-    go run cloudeng.io/go/cmd/gomarkdown --overwrite ./...
+    go run cloudeng.io/go/cmd/`gomarkdown` --overwrite ./...
+
+In addition `gomarkdown` can be used to generate markdown for command line
+packages. In doing so it employs simple heurestics to format package
+comments.
+
+    - lines with fewer than 5 words that end in a : are treated as headings.
+    - all occurrences of the command's name are highlighted.
+
+# Command line flags
 
     -circleci string
       	set to the circleci project to insert a circleci build badge

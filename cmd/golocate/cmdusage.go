@@ -21,6 +21,7 @@
 // uses cases arise. Currently locating interface implementations is the
 // most useful.
 //
+// Command line flags:
 //   -comments string
 //     	if set, find all comments that match this regular expression in the specified packages.
 //   -functions string

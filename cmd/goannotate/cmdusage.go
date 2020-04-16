@@ -6,6 +6,7 @@
 // goannotate provides a configurable and extensible set of annotators
 // that can be used to add/remove statements from large bodies of go source code.
 //
+// Command line flags:
 //   -annotation string
 //     	annotation to be applied
 //   -config string

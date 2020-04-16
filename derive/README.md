@@ -1,4 +1,4 @@
-# [derive](https://pkg.go.dev/cloudeng.io/go/derive?tab=doc)
+# Package [cloudeng.io/go/derive](https://pkg.go.dev/cloudeng.io/go/derive?tab=doc)
 [![CircleCI](https://circleci.com/gh/cloudengio/go.gotools.svg?style=svg)](https://circleci.com/gh/cloudengio/go.gotools) [![Go Report Card](https://goreportcard.com/badge/cloudeng.io/go/derive)](https://goreportcard.com/report/cloudeng.io/go/derive)
 
 ```go

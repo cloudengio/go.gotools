@@ -19,7 +19,7 @@ func init() {
 	flag.Usage = func() {
 		out := flag.CommandLine.Output()
 		fmt.Fprintf(out, "Usage of %s:\n", filepath.Base(os.Args[0]))
-		fmt.Fprintf(out, "%s\n", usage)
+		fmt.Fprintf(out, "%s\nCommand line flags:\n", usage)
 		flag.PrintDefaults()
 	}
 }

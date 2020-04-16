@@ -15,6 +15,7 @@
 //
 //   go run cloudeng.io/go/cmd/gousage --overwrite ./...
 //
+// Command line flags:
 //   -go-output string
 //     	name of generated go file. (default "cmdusage.go")
 //   -overwrite

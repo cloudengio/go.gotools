@@ -1,4 +1,4 @@
-# [locate](https://pkg.go.dev/cloudeng.io/go/locate?tab=doc)
+# Package [cloudeng.io/go/locate](https://pkg.go.dev/cloudeng.io/go/locate?tab=doc)
 [![CircleCI](https://circleci.com/gh/cloudengio/go.gotools.svg?style=svg)](https://circleci.com/gh/cloudengio/go.gotools) [![Go Report Card](https://goreportcard.com/badge/cloudeng.io/go/locate)](https://goreportcard.com/report/cloudeng.io/go/locate)
 
 ```go

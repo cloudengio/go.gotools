@@ -1,10 +1,12 @@
-# [main](https://pkg.go.dev/cloudeng.io/go/cmd/goannotate?tab=doc)
+# [cloudeng.io/go/cmd/goannotate](https://pkg.go.dev/cloudeng.io/go/cmd/goannotate?tab=doc)
+[![CircleCI](https://circleci.com/gh/cloudengio/go.gotools.svg?style=svg)](https://circleci.com/gh/cloudengio/go.gotools) [![Go Report Card](https://goreportcard.com/badge/cloudeng.io/go/cmd/goannotate)](https://goreportcard.com/report/cloudeng.io/go/cmd/goannotate)
 
-# Command cloudeng.io/go/cmd/goannotate
 
-Usage of goannotate: goannotate provides a configurable and extensible set
+Usage of `goannotate`: `goannotate` provides a configurable and extensible set
 of annotators that can be used to add/remove statements from large bodies of
 go source code.
+
+# Command line flags
 
     -annotation string
       	annotation to be applied

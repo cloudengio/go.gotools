@@ -1,10 +1,10 @@
-# [main](https://pkg.go.dev/cloudeng.io/go/cmd/golocate?tab=doc)
+# [cloudeng.io/go/cmd/golocate](https://pkg.go.dev/cloudeng.io/go/cmd/golocate?tab=doc)
+[![CircleCI](https://circleci.com/gh/cloudengio/go.gotools.svg?style=svg)](https://circleci.com/gh/cloudengio/go.gotools) [![Go Report Card](https://goreportcard.com/badge/cloudeng.io/go/cmd/golocate)](https://goreportcard.com/report/cloudeng.io/go/cmd/golocate)
 
-# Command cloudeng.io/go/cmd/golocate
 
-Usage of golocate:
+# Usage of `golocate`
 
-golocate is a utility for locating interface implementations, functions and
+`golocate` is a utility for locating interface implementations, functions and
 comments in go source code using the parsed representation of the code
 rather than simple text search.
 
@@ -20,9 +20,11 @@ Locate all comments in ./...
 
     go run . --comments='.*' ./...
 
-The output of golocate is limited right now but is easily extended as uses
+The output of `golocate` is limited right now but is easily extended as uses
 cases arise. Currently locating interface implementations is the most
 useful.
+
+# Command line flags
 
     -comments string
       	if set, find all comments that match this regular expression in the specified packages.

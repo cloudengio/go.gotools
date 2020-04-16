@@ -13,11 +13,44 @@ import (
 	"go/format"
 	"go/token"
 	"os"
+	"path"
 	"strings"
 	"text/template"
 
 	"golang.org/x/tools/go/packages"
 )
+
+// any line with fewer than the requested number of words and which ends in
+// a colon is deemed to be a heading.
+func guessHeadings(level, words int, text string) string {
+	out := strings.Builder{}
+	heading := strings.Repeat("#", level) + " "
+	sc := bufio.NewScanner(bytes.NewBufferString(text))
+	for sc.Scan() {
+		fields := strings.Fields(sc.Text())
+		l := len(fields)
+		if l > 0 && l < words && strings.HasSuffix(fields[l-1], ":") {
+			out.WriteString(heading)
+			fields[l-1] = strings.TrimSuffix(fields[l-1], ":")
+			out.WriteString(strings.Join(fields, " "))
+		} else {
+			out.WriteString(sc.Text())
+		}
+		out.WriteString("\n")
+	}
+	return out.String()
+}
+
+func highlight(word, text string) string {
+	out := strings.Builder{}
+	sc := bufio.NewScanner(bytes.NewBufferString(text))
+	for sc.Scan() {
+		line := strings.ReplaceAll(sc.Text(), word, "`"+word+"`")
+		out.WriteString(line)
+		out.WriteString("\n")
+	}
+	return out.String()
+}
 
 func goComment(text string) string {
 	out := strings.Builder{}
@@ -101,8 +134,10 @@ func newOutputState(doc *doc.Package, pkg *packages.Package, opts ...outputOptio
 		"codeEnd":          st.codeEnd,
 		"comment":          st.comment,
 		"filterGoGenerate": filterGoGenerate,
-		"gocomment":        goComment,
 		"func":             st.funcDecl,
+		"gocomment":        goComment,
+		"guessHeadings":    guessHeadings,
+		"highlight":        highlight,
 		"type":             st.typeDecl,
 		"value":            st.valueDecl,
 		"join":             strings.Join,
@@ -175,7 +210,7 @@ func (st *outputState) codeEnd() string {
 }
 
 func (st *outputState) godocOrgPackageLink() string {
-	return fmt.Sprintf("[%s](https://godoc.org/%s)", st.doc.Name, st.doc.ImportPath)
+	return fmt.Sprintf("[%s](https://godoc.org/%s)", st.pkg.PkgPath, st.doc.ImportPath)
 }
 
 func (st *outputState) godocOrgExampleLink(eg *doc.Example) string {
@@ -185,7 +220,7 @@ func (st *outputState) godocOrgExampleLink(eg *doc.Example) string {
 
 func (st *outputState) pkgGoDevPackageLink() string {
 	return fmt.Sprintf("[%s](https://pkg.go.dev/%s?tab=doc)",
-		st.doc.Name, st.doc.ImportPath)
+		st.pkg.PkgPath, st.doc.ImportPath)
 }
 
 func (st *outputState) pkgGoDevExampleLink(eg *doc.Example) string {
@@ -219,11 +254,18 @@ func (st *outputState) outputCommand() (string, error) {
 		return "", fmt.Errorf("failed to create template: %v", err)
 	}
 	out := &strings.Builder{}
-	err = tpl.Execute(out, st.doc)
+	tmp := struct {
+		*doc.Package
+		CommandName string
+	}{
+		st.doc,
+		path.Base(st.pkg.PkgPath),
+	}
+	err = tpl.Execute(out, tmp)
 	return out.String(), err
 }
 
-var markdownPackageTemplate = `# {{packageLink}}
+var markdownPackageTemplate = `# Package {{packageLink}}
 {{if badges}}{{badges}}
 {{end}}
 {{codeStart}}
@@ -283,8 +325,8 @@ import {{.ImportPath}}
 `
 
 var markdownCommandTemplate = `# {{packageLink}}
+{{if badges}}{{badges}}
+{{end}}
 
-# Command {{.ImportPath}}
-
-{{comment 0 4 .Doc}}
+{{comment 0 4 .Doc| guessHeadings 1 5 | highlight .CommandName }}
 `
