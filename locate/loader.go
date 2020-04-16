@@ -39,13 +39,14 @@ func newLoader(trace traceFunc) *loader {
 	}
 }
 
-func (ld *loader) loadPaths(paths []string) error {
+func (ld *loader) loadPaths(paths []string, includeTests bool) error {
 	cfg := &packages.Config{
-		Mode: packages.NeedName | packages.NeedSyntax |
-			packages.NeedTypes | packages.NeedTypesInfo | packages.NeedCompiledGoFiles,
-		Tests:      false,
+		Mode: packages.NeedName | packages.NeedSyntax | packages.NeedTypes |
+			packages.NeedFiles | packages.NeedTypesInfo | packages.NeedCompiledGoFiles,
+		Tests:      includeTests,
 		BuildFlags: nil, // TODO: provide an option for buildflags.
 	}
+
 	if len(paths) == 0 {
 		return nil
 	}

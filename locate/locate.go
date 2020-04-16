@@ -77,6 +77,7 @@ func (hm HitMask) String() string {
 
 type options struct {
 	concurrency               int
+	tests                     bool
 	ignoreMissingFunctionsEtc bool
 	trace                     func(string, ...interface{})
 }
@@ -92,7 +93,7 @@ func Concurrency(c int) Option {
 	}
 }
 
-// Trace sets a trace function
+// Trace sets a trace function.
 func Trace(fn func(string, ...interface{})) Option {
 	return func(o *options) {
 		o.trace = fn
@@ -104,6 +105,13 @@ func Trace(fn func(string, ...interface{})) Option {
 func IgnoreMissingFuctionsEtc() Option {
 	return func(o *options) {
 		o.ignoreMissingFunctionsEtc = true
+	}
+}
+
+// IncludeTests includes test code from all requested packages.
+func IncludeTests() Option {
+	return func(o *options) {
+		o.tests = true
 	}
 }
 
@@ -184,7 +192,7 @@ func (t *T) Do(ctx context.Context) error {
 	}
 
 	comments := dedup(t.commentExpressions)
-	if err := t.loader.loadPaths(allPackages); err != nil {
+	if err := t.loader.loadPaths(allPackages, t.options.tests); err != nil {
 		return err
 	}
 	if err := t.findInterfaces(ctx, interfaces); err != nil {
