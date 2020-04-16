@@ -44,11 +44,15 @@ type T struct {
 	dirty map[string]HitMask
 }
 
+// HitMask encodes the type of object found in a given file.
 type HitMask int
 
 const (
+	// HasComment is set if the current file contains a comment.
 	HasComment HitMask = 1 << iota
+	// HasFunction is set if the current file contains a function.
 	HasFunction
+	// HasInterface is set if the current file contains an interface.
 	HasInterface
 	hitSentinel
 )
@@ -77,6 +81,7 @@ func (hm HitMask) String() string {
 
 type options struct {
 	concurrency               int
+	tests                     bool
 	ignoreMissingFunctionsEtc bool
 	trace                     func(string, ...interface{})
 }
@@ -92,7 +97,7 @@ func Concurrency(c int) Option {
 	}
 }
 
-// Trace sets a trace function
+// Trace sets a trace function.
 func Trace(fn func(string, ...interface{})) Option {
 	return func(o *options) {
 		o.trace = fn
@@ -104,6 +109,13 @@ func Trace(fn func(string, ...interface{})) Option {
 func IgnoreMissingFuctionsEtc() Option {
 	return func(o *options) {
 		o.ignoreMissingFunctionsEtc = true
+	}
+}
+
+// IncludeTests includes test code from all requested packages.
+func IncludeTests() Option {
+	return func(o *options) {
+		o.tests = true
 	}
 }
 
@@ -184,7 +196,7 @@ func (t *T) Do(ctx context.Context) error {
 	}
 
 	comments := dedup(t.commentExpressions)
-	if err := t.loader.loadPaths(allPackages); err != nil {
+	if err := t.loader.loadPaths(allPackages, t.options.tests); err != nil {
 		return err
 	}
 	if err := t.findInterfaces(ctx, interfaces); err != nil {

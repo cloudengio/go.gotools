@@ -16,6 +16,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// EnsureCopyrightAndLicense represents an annotator that can insert or replace
+// copyright and license headers from go source code files.
 type EnsureCopyrightAndLicense struct {
 	Type        string   `annotator:"name of annotator type."`
 	Name        string   `annotator:"name of annotation."`
@@ -60,7 +62,7 @@ func (ec *EnsureCopyrightAndLicense) Do(ctx context.Context, root string, pkgs [
 	locator.AddPackages(pkgs...)
 	Verbosef("locating functions to have a copyright/license annotation...")
 	if err := locator.Do(ctx); err != nil {
-		return fmt.Errorf("failed to locate functions and/or interface implementations: %v\n", err)
+		return fmt.Errorf("failed to locate functions and/or interface implementations: %v", err)
 	}
 
 	newCopyright := strings.TrimSuffix(ec.Copyright, "\n") + "\n"

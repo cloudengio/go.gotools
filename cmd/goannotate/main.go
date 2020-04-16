@@ -19,26 +19,26 @@ import (
 )
 
 var (
-	ConfigFileFlag string
-	AnnotationFlag string
-	WriteDirFlag   string
-	ListFlag       bool
-	ListConfigFlag bool
-	VerboseFlag    bool
+	configFileFlag string
+	annotationFlag string
+	writeDirFlag   string
+	listFlag       bool
+	listConfigFlag bool
+	verboseFlag    bool
 )
 
 const defaultConfigFile = "config.yaml"
 
 func init() {
-	flag.StringVar(&ConfigFileFlag, "config", os.ExpandEnv(defaultConfigFile), "yaml configuration file")
-	flag.StringVar(&AnnotationFlag, "annotation", "", "annotation to be applied")
-	flag.StringVar(&WriteDirFlag, "write-dir", "", "if set, specify an alternate directory to write modified files to, otherwise files are modified in place.")
-	flag.BoolVar(&ListFlag, "list", false, "list available annotators")
-	flag.BoolVar(&ListConfigFlag, "list-config", false, "list available annotations and their configurations")
-	flag.BoolVar(&VerboseFlag, "verbose", false, "display verbose debug info")
+	flag.StringVar(&configFileFlag, "config", os.ExpandEnv(defaultConfigFile), "yaml configuration file")
+	flag.StringVar(&annotationFlag, "annotation", "", "annotation to be applied")
+	flag.StringVar(&writeDirFlag, "write-dir", "", "if set, specify an alternate directory to write modified files to, otherwise files are modified in place.")
+	flag.BoolVar(&listFlag, "list", false, "list available annotators")
+	flag.BoolVar(&listConfigFlag, "list-config", false, "list available annotations and their configurations")
+	flag.BoolVar(&verboseFlag, "verbose", false, "display verbose debug info")
 }
 
-func handleDebug(ctx context.Context, cfg Debug) (func(), error) {
+func handleDebug(ctx context.Context, cfg debug) (func(), error) {
 	var cpu io.WriteCloser
 	if filename := os.ExpandEnv(cfg.CPUProfile); len(filename) > 0 {
 		var err error
@@ -63,21 +63,21 @@ func handleDebug(ctx context.Context, cfg Debug) (func(), error) {
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	flag.Parse()
-	annotators.Verbose = VerboseFlag
+	annotators.Verbose = verboseFlag
 
-	if ListFlag {
+	if listFlag {
 		fmt.Println(describe(annotators.Registered()))
 		return
 	}
 
-	config, err := ConfigFromFile(ConfigFileFlag)
+	config, err := configFromFile(configFileFlag)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	if ListConfigFlag {
+	if listConfigFlag {
 		fmt.Println(describe(annotators.Available()))
 		return
 	}
@@ -91,22 +91,22 @@ func main() {
 	cmdutil.HandleSignals(cancel, os.Interrupt, os.Kill)
 	cmdutil.HandleSignals(cleanup, os.Interrupt, os.Kill)
 
-	if !flags.ExactlyOneSet(AnnotationFlag) {
+	if !flags.ExactlyOneSet(annotationFlag) {
 		cmdutil.Exit("--annotation must be specified\n")
 	}
-	names := bySuffix(AnnotationFlag)
+	names := bySuffix(annotationFlag)
 	switch len(names) {
 	case 0:
-		cmdutil.Exit("no annotator found for %v\n", AnnotationFlag)
+		cmdutil.Exit("no annotator found for %v\n", annotationFlag)
 	case 1:
 	default:
-		cmdutil.Exit("multiple annotators found for %v: %v\n", AnnotationFlag, strings.Join(names, ", "))
+		cmdutil.Exit("multiple annotators found for %v: %v\n", annotationFlag, strings.Join(names, ", "))
 	}
 	an := annotators.Lookup(names[0])
 	if an == nil {
-		cmdutil.Exit("unrecognised annotation: %v\n%v\n", AnnotationFlag, describe(annotators.Available()))
+		cmdutil.Exit("unrecognised annotation: %v\n%v\n", annotationFlag, describe(annotators.Available()))
 	}
-	if err := an.Do(ctx, WriteDirFlag, flag.Args()); err != nil {
+	if err := an.Do(ctx, writeDirFlag, flag.Args()); err != nil {
 		cmdutil.Exit("%v", err)
 	}
 }

@@ -1,73 +1,81 @@
-# annotators
---
-    import "cloudeng.io/go/cmd/goannotate/annotators"
-
-go:generate go run github.com/robertkrimen/godocdown/godocdown -o README.md
-cloudeng.io/go/cmd/goannotate/annotators
-
-## Usage
+# Package [cloudeng.io/go/cmd/goannotate/annotators](https://pkg.go.dev/cloudeng.io/go/cmd/goannotate/annotators?tab=doc)
+[![CircleCI](https://circleci.com/gh/cloudengio/go.gotools.svg?style=svg)](https://circleci.com/gh/cloudengio/go.gotools) [![Go Report Card](https://goreportcard.com/badge/cloudeng.io/go/cmd/goannotate/annotators)](https://goreportcard.com/report/cloudeng.io/go/cmd/goannotate/annotators)
 
 ```go
-const TagName = "annotator"
+import cloudeng.io/go/cmd/goannotate/annotators
 ```
 
+
+## Constants
+
+### TagName
 ```go
-var (
-	Verbose = false
-	Trace   = false
-)
+TagName = "annotator"
+
+```
+TagName is the struct tag used to document annotator configuration fields.
+
+
+
+## Variables
+### Verbose
+```go
+// Verbose controls verbose logging.
+Verbose = false
+
 ```
 
-#### func  Available
 
+
+## Functions
+### Func Available
 ```go
 func Available() []string
 ```
 Available lists all available annotations.
 
-#### func  Describe
-
+### Func Describe
 ```go
 func Describe(t interface{}, msg string) (string, error)
 ```
+Describe generates a description for the supplied type based on its struct
+tags.
 
-#### func  DescribeX
-
+### Func Description
 ```go
-func DescribeX(name string) string
+func Description(name string) string
 ```
-DescribeX returns the description for the annotator or annotation.
+Description returns the description for the annotator or annotation.
 
-#### func  MustDescribe
-
+### Func MustDescribe
 ```go
 func MustDescribe(t interface{}, msg string) string
 ```
+MustDescribe is like describe except that panics on an error.
 
-#### func  Register
-
+### Func Register
 ```go
 func Register(annotator Annotator)
 ```
 Register registers a new annotator.
 
-#### func  Registered
-
+### Func Registered
 ```go
 func Registered() []string
 ```
 Registered lists all registered annotatators.
 
-#### func  Verbosef
-
+### Func Verbosef
 ```go
 func Verbosef(format string, args ...interface{})
 ```
-Verbosef is like fmt.Printf but will produce output if the Verbose variable is
-true.
+Verbosef is like fmt.Printf but will produce output if the Verbose variable
+is true.
 
-#### type AddLogCall
 
+
+## Types
+### Type AddLogCall
 ```go
 type AddLogCall struct {
 	Type                 string   `annotator:"name of annotator type."`
@@ -90,40 +98,10 @@ type AddLogCall struct {
 	Results      string `yaml:",omitempty"`
 }
 ```
-
 AddLogCall represents an annotator for adding a function call that logs the
 entry and exit to every function and method that is matched by the locator.
 
-#### func (*AddLogCall) Describe
-
-```go
-func (lc *AddLogCall) Describe() string
-```
-Describe implements annotators.Annotation.
-
-#### func (*AddLogCall) Do
-
-```go
-func (lc *AddLogCall) Do(ctx context.Context, root string, pkgs []string) error
-```
-Do implements annotators.Annotation.
-
-#### func (*AddLogCall) New
-
-```go
-func (lc *AddLogCall) New(name string) Annotation
-```
-New implements annotators.Annotator.
-
-#### func (*AddLogCall) UnmarshalYAML
-
-```go
-func (lc *AddLogCall) UnmarshalYAML(buf []byte) error
-```
-UnmarshalYAML implements annotators.Annotation.
-
-#### type Annotation
-
+### Type Annotation
 ```go
 type Annotation interface {
 	// UnmarshalYAML unmarshals the annotator's yaml configuration.
@@ -137,18 +115,9 @@ type Annotation interface {
 	Describe() string
 }
 ```
-
 Annotation represents a configured instance of an Annotator.
 
-#### func  Lookup
-
-```go
-func Lookup(name string) Annotation
-```
-Lookup returns the annotation with the specifed typeName, if any.
-
-#### type Annotator
-
+### Type Annotator
 ```go
 type Annotator interface {
 	// New creates a new instance of T. It used to create new configurations
@@ -157,11 +126,9 @@ type Annotator interface {
 	Describe() string
 }
 ```
-
 Annotator represents the interface that all annotators must implement.
 
-#### type EnsureCopyrightAndLicense
-
+### Type EnsureCopyrightAndLicense
 ```go
 type EnsureCopyrightAndLicense struct {
 	Type        string   `annotator:"name of annotator type."`
@@ -172,38 +139,10 @@ type EnsureCopyrightAndLicense struct {
 	Concurrency int      `annotator:"the number of goroutines to use, zero for a sensible default."`
 }
 ```
+EnsureCopyrightAndLicense represents an annotator that can insert or replace
+copyright and license headers from go source code files.
 
-
-#### func (*EnsureCopyrightAndLicense) Describe
-
-```go
-func (ec *EnsureCopyrightAndLicense) Describe() string
-```
-Describe implements annotators.Annotations.
-
-#### func (*EnsureCopyrightAndLicense) Do
-
-```go
-func (ec *EnsureCopyrightAndLicense) Do(ctx context.Context, root string, pkgs []string) error
-```
-Do implements annotators.Annotations.
-
-#### func (*EnsureCopyrightAndLicense) New
-
-```go
-func (ec *EnsureCopyrightAndLicense) New(name string) Annotation
-```
-New implements annotators.Annotators.
-
-#### func (*EnsureCopyrightAndLicense) UnmarshalYAML
-
-```go
-func (ec *EnsureCopyrightAndLicense) UnmarshalYAML(buf []byte) error
-```
-UnmarshalYAML implements annotators.Annotations.
-
-#### type RmLogCall
-
+### Type RmLogCall
 ```go
 type RmLogCall struct {
 	Type        string   `annotator:"name of annotator type."`
@@ -217,38 +156,9 @@ type RmLogCall struct {
 	Concurrency int      `annotator:"the number of goroutines to use, zero for a sensible default."`
 }
 ```
+RmLogCall represents an annotor for removing logging calls.
 
-
-#### func (*RmLogCall) Describe
-
-```go
-func (rc *RmLogCall) Describe() string
-```
-Describe implements annotators.Annotation.
-
-#### func (*RmLogCall) Do
-
-```go
-func (rc *RmLogCall) Do(ctx context.Context, root string, pkgs []string) error
-```
-Do implements annotators.Annotation.
-
-#### func (*RmLogCall) New
-
-```go
-func (rc *RmLogCall) New(name string) Annotation
-```
-New implements annotators.Annotator.
-
-#### func (*RmLogCall) UnmarshalYAML
-
-```go
-func (rc *RmLogCall) UnmarshalYAML(buf []byte) error
-```
-UnmarshalYAML implements annotators.Annotation.
-
-#### type Spec
-
+### Type Spec
 ```go
 type Spec struct {
 	yaml.MapSlice
@@ -256,14 +166,10 @@ type Spec struct {
 	Type string // Type identifies the annotation to be peformed.
 }
 ```
+Spec represents the yaml configuration for an annotation. It has a common
+field for the type and name of the annotator but all other fields are
+delegated to the Unmarshal method of the annotator specuifed by the Type
+field.
 
-Spec represents the yaml configuration for an annotation. It has a common field
-for the type and name of the annotator but all other fields are delegated to the
-Unmarshal method of the annotator specuifed by the Type field.
 
-#### func (*Spec) UnmarshalYAML
 
-```go
-func (s *Spec) UnmarshalYAML(unmarshal func(interface{}) error) error
-```
-UnmarshalYAML implements yaml.Unmarshaler.

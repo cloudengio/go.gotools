@@ -27,6 +27,8 @@ type FuncDesc struct {
 	Package  *packages.Package
 }
 
+// Functions returns the functions in the supplied package that match the
+// regular expression. If noMethods is false then methods are also returned.
 func Functions(pkg *packages.Package, re *regexp.Regexp, noMethods bool) []FuncDesc {
 	descs := []FuncDesc{}
 	for k, obj := range pkg.TypesInfo.Defs {

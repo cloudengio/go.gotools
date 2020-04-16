@@ -15,8 +15,8 @@ import (
 )
 
 var (
+	// Verbose controls verbose logging.
 	Verbose        = false
-	Trace          = false
 	annotators     = map[string]Annotator{}
 	configurations = map[string]Annotation{}
 )

@@ -13,17 +13,17 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type Debug struct {
+type debug struct {
 	CPUProfile string `yaml:"cpu_profile"`
 }
 
-type Config struct {
+type config struct {
 	Annotations []annotators.Spec `yam:"annotations"`
-	Debug       Debug             `yam:"debug"`
+	Debug       debug             `yam:"debug"`
 }
 
-func ConfigFromFile(filename string) (*Config, error) {
-	config := &Config{}
+func configFromFile(filename string) (*config, error) {
+	config := &config{}
 	buf, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %v", err)

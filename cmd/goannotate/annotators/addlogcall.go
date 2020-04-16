@@ -92,7 +92,7 @@ func (lc *AddLogCall) Do(ctx context.Context, root string, pkgs []string) error 
 	locator.AddPackages(pkgs...)
 	Verbosef("locating functions to be annotated with a logcall...")
 	if err := locator.Do(ctx); err != nil {
-		return fmt.Errorf("failed to locate functions and/or interface implementations: %v\n", err)
+		return fmt.Errorf("failed to locate functions and/or interface implementations: %v", err)
 	}
 
 	dirty := map[string]bool{}
