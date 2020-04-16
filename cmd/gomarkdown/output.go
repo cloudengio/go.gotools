@@ -12,6 +12,7 @@ import (
 	"go/doc"
 	"go/format"
 	"go/token"
+	"os"
 	"strings"
 	"text/template"
 
@@ -137,7 +138,9 @@ func (st *outputState) valueDecl(decl *ast.GenDecl) string {
 	case token.CONST, token.VAR:
 		out := &strings.Builder{}
 		for _, spec := range decl.Specs {
-			format.Node(out, st.pkg.Fset, spec)
+			if err := format.Node(out, st.pkg.Fset, spec); err != nil {
+				fmt.Fprintf(os.Stderr, "%v: failed to format const or var node: %v", st.pkg.PkgPath, err)
+			}
 			out.WriteString("\n")
 		}
 		return out.String()
@@ -147,13 +150,19 @@ func (st *outputState) valueDecl(decl *ast.GenDecl) string {
 
 func (st *outputState) funcDecl(decl *ast.FuncDecl) string {
 	out := &strings.Builder{}
-	format.Node(out, st.pkg.Fset, decl)
+	if err := format.Node(out, st.pkg.Fset, decl); err != nil {
+		at := st.pkg.Fset.PositionFor(decl.Pos(), false)
+		fmt.Fprintf(os.Stderr, "%v: failed to format function declaration at %v: %v", st.pkg.PkgPath, at, err)
+	}
 	return out.String()
 }
 
 func (st *outputState) typeDecl(decl *ast.GenDecl) string {
 	out := &strings.Builder{}
-	format.Node(out, st.pkg.Fset, decl)
+	if err := format.Node(out, st.pkg.Fset, decl); err != nil {
+		at := st.pkg.Fset.PositionFor(decl.Pos(), false)
+		fmt.Fprintf(os.Stderr, "%v: failed to format type declaration at %v: %v", st.pkg.PkgPath, at, err)
+	}
 	return out.String()
 }
 
