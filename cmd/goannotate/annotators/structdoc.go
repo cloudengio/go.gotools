@@ -12,6 +12,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// TagName is the struct tag used to document annotator configuration fields.
 const TagName = "annotator"
 
 func formatTags(typ reflect.Type) string {
@@ -49,6 +50,7 @@ func formatTags(typ reflect.Type) string {
 	return out.String()
 }
 
+// MustDescribe is like describe except that panics on an error.
 func MustDescribe(t interface{}, msg string) string {
 	r, err := Describe(t, msg)
 	if err != nil {
@@ -57,6 +59,8 @@ func MustDescribe(t interface{}, msg string) string {
 	return r
 }
 
+// Describe generates a description for the supplied type based on its
+// struct tags.
 func Describe(t interface{}, msg string) (string, error) {
 	typ := reflect.TypeOf(t)
 	if typ.Kind() == reflect.Ptr {

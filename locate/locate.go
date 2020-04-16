@@ -44,11 +44,15 @@ type T struct {
 	dirty map[string]HitMask
 }
 
+// HitMask encodes the type of object found in a given file.
 type HitMask int
 
 const (
+	// HasComment is set if the current file contains a comment.
 	HasComment HitMask = 1 << iota
+	// HasFunction is set if the current file contains a function.
 	HasFunction
+	// HasInterface is set if the current file contains an interface.
 	HasInterface
 	hitSentinel
 )

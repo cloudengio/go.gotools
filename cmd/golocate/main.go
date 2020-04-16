@@ -20,33 +20,33 @@ import (
 )
 
 var (
-	InterfaceFlag string
-	CommentFlag   string
-	FunctionFlag  string
+	interfaceFlag string
+	commentFlag   string
+	functionFlag  string
 )
 
 func init() {
-	flag.StringVar(&InterfaceFlag, "interfaces", "", "if set, find all implementations of these interfaces in the speficied packages. The package local component of the interface name is treated as a regular expression")
-	flag.StringVar(&CommentFlag, "comments", "", "if set, find all comments that match this regular expression in the specified packages.")
-	flag.StringVar(&FunctionFlag, "functions", "", "if set, find all functions whose name matches this regular expression.")
+	flag.StringVar(&interfaceFlag, "interfaces", "", "if set, find all implementations of these interfaces in the speficied packages. The package local component of the interface name is treated as a regular expression")
+	flag.StringVar(&commentFlag, "comments", "", "if set, find all comments that match this regular expression in the specified packages.")
+	flag.StringVar(&functionFlag, "functions", "", "if set, find all functions whose name matches this regular expression.")
 }
 
 func main() {
 	ctx := context.Background()
 	flag.Parse()
 
-	if !flags.ExactlyOneSet(CommentFlag, FunctionFlag, InterfaceFlag) {
+	if !flags.ExactlyOneSet(commentFlag, functionFlag, interfaceFlag) {
 		cmdutil.Exit("only one of --comments, --functions or --interfaces can be set")
 	}
 	var err error
-	if len(InterfaceFlag) > 0 {
-		err = handleInterfaces(ctx, InterfaceFlag, flag.Args())
+	if len(interfaceFlag) > 0 {
+		err = handleInterfaces(ctx, interfaceFlag, flag.Args())
 	}
-	if len(CommentFlag) > 0 {
-		err = handleComments(ctx, CommentFlag, flag.Args())
+	if len(commentFlag) > 0 {
+		err = handleComments(ctx, commentFlag, flag.Args())
 	}
-	if len(FunctionFlag) > 0 {
-		err = handleFunctions(ctx, FunctionFlag, flag.Args())
+	if len(functionFlag) > 0 {
+		err = handleFunctions(ctx, functionFlag, flag.Args())
 	}
 	if err != nil {
 		cmdutil.Exit("error: %v", err)

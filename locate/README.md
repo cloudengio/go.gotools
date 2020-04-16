@@ -14,6 +14,7 @@ to annotating that source code programmatically.
 ```go
 type HitMask int
 ```
+HitMask encodes the type of object found in a given file.
 
 ### Type Option
 ```go

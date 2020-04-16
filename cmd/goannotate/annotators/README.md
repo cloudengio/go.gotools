@@ -13,20 +13,15 @@ import cloudeng.io/go/cmd/goannotate/annotators
 TagName = "annotator"
 
 ```
+TagName is the struct tag used to document annotator configuration fields.
 
 
 
 ## Variables
-### Verbose, Trace
+### Verbose
 ```go
+// Verbose controls verbose logging.
 Verbose = false
-Trace = false
-
-```
-
-### FooBar
-```go
-FooBar = map[string]string{}
 
 ```
 
@@ -43,6 +38,8 @@ Available lists all available annotations.
 ```go
 func Describe(t interface{}, msg string) (string, error)
 ```
+Describe generates a description for the supplied type based on its struct
+tags.
 
 ### Func Description
 ```go
@@ -54,6 +51,7 @@ Description returns the description for the annotator or annotation.
 ```go
 func MustDescribe(t interface{}, msg string) string
 ```
+MustDescribe is like describe except that panics on an error.
 
 ### Func Register
 ```go
@@ -141,6 +139,8 @@ type EnsureCopyrightAndLicense struct {
 	Concurrency int      `annotator:"the number of goroutines to use, zero for a sensible default."`
 }
 ```
+EnsureCopyrightAndLicense represents an annotator that can insert or replace
+copyright and license headers from go source code files.
 
 ### Type RmLogCall
 ```go
@@ -156,6 +156,7 @@ type RmLogCall struct {
 	Concurrency int      `annotator:"the number of goroutines to use, zero for a sensible default."`
 }
 ```
+RmLogCall represents an annotor for removing logging calls.
 
 ### Type Spec
 ```go

@@ -15,12 +15,8 @@ import (
 )
 
 var (
-	FooBar = map[string]string{}
-)
-
-var (
+	// Verbose controls verbose logging.
 	Verbose        = false
-	Trace          = false
 	annotators     = map[string]Annotator{}
 	configurations = map[string]Annotation{}
 )

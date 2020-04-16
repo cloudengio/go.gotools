@@ -18,6 +18,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// RmLogCall represents an annotor for removing logging calls.
 type RmLogCall struct {
 	Type        string   `annotator:"name of annotator type."`
 	Name        string   `annotator:"name of annotation."`
@@ -61,7 +62,7 @@ func (rc *RmLogCall) Do(ctx context.Context, root string, pkgs []string) error {
 	locator.AddPackages(pkgs...)
 	Verbosef("locating functions to have a logcall annotation removal...")
 	if err := locator.Do(ctx); err != nil {
-		return fmt.Errorf("failed to locate functions and/or interface implementations: %v\n", err)
+		return fmt.Errorf("failed to locate functions and/or interface implementations: %v", err)
 	}
 
 	edits := map[string][]edit.Delta{}
