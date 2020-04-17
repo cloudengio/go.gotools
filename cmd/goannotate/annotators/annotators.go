@@ -92,7 +92,7 @@ func Available() []string {
 	return av
 }
 
-// Lookup returns the annotation with the specifed typeName, if any.
+// Lookup returns the annotation with the specified typeName, if any.
 func Lookup(name string) Annotation {
 	return configurations[name]
 }
@@ -103,7 +103,7 @@ func Lookup(name string) Annotation {
 type Spec struct {
 	yaml.MapSlice
 	Name string // Name identifies a particular configuration of an annotator type.
-	Type string // Type identifies the annotation to be peformed.
+	Type string // Type identifies the annotation to be performed.
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler.

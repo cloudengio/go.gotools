@@ -32,6 +32,38 @@ func (t *T) findInterfaces(ctx context.Context, interfaces []string) error {
 	return group.Wait()
 }
 
+func (t *T) findEmbeddedInterfaces(ctx context.Context, pkgPath string, ifcType *types.Interface) (map[string]bool, error) {
+	if ifcType.NumEmbeddeds() == 0 {
+		return nil, nil
+	}
+	// Make sure to include embedded interfaces. To do so, gather
+	// the names of the embedded interfaces and iterate over the
+	// typed checked definitions to locate them.
+	names := map[string]bool{}
+	for i := 0; i < ifcType.NumEmbeddeds(); i++ {
+		et := ifcType.EmbeddedType(i)
+		named, ok := et.(*types.Named)
+		if !ok {
+			continue
+		}
+		obj := named.Obj()
+		epkg := obj.Pkg()
+		if epath := epkg.Path(); epath != pkgPath {
+			// Treat the external embedded interface as if it was
+			// directly requested.
+			re, _ := regexp.Compile(obj.Name() + "$")
+			if err := t.findInterfacesInPackage(ctx, epath, re); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		// Record the name of the locally defined embedded interfaces
+		// and then look for them in the typed checked Defs.
+		names[named.Obj().Name()] = true
+	}
+	return names, nil
+}
+
 func (t *T) findInterfacesInPackage(ctx context.Context, pkgPath string, ifcRE *regexp.Regexp) error {
 	pkg := t.loader.lookupPackage(pkgPath)
 	if pkg == nil {
@@ -51,34 +83,13 @@ func (t *T) findInterfacesInPackage(ctx context.Context, pkgPath string, ifcRE *
 		if ifcType == nil {
 			continue
 		}
-		if el := ifcType.NumEmbeddeds(); el > 0 {
-			// Make sure to include embedded interfaces. To do so, gather
-			// the names of the embedded interfaces and iterate over the
-			// typed checked definitions to locate them.
-			names := map[string]bool{}
-			for i := 0; i < el; i++ {
-				et := ifcType.EmbeddedType(i)
-				named, ok := et.(*types.Named)
-				if !ok {
-					continue
-				}
-				obj := named.Obj()
-				epkg := obj.Pkg()
-				if epath := epkg.Path(); epath != pkgPath {
-					// Treat the external embedded interface as if it was
-					// directly requested.
-					re, _ := regexp.Compile(obj.Name() + "$")
-					if err := t.findInterfacesInPackage(ctx, epath, re); err != nil {
-						return err
-					}
-					continue
-				}
-				// Record the name of the locally defined embedded interfaces
-				// and then look for them in the typed checked Defs.
-				names[named.Obj().Name()] = true
-			}
+		embedded, err := t.findEmbeddedInterfaces(ctx, pkgPath, ifcType)
+		if err != nil {
+			return err
+		}
+		if len(embedded) > 0 {
 			for ek, eobj := range checked.Defs {
-				if names[ek.Name] {
+				if embedded[ek.Name] {
 					ifcType := locateutil.IsInterfaceDefinition(pkg, eobj)
 					if ifcType == nil {
 						continue

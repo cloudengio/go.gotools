@@ -39,6 +39,20 @@ func init() {
 	flag.BoolVar(&overwriteFlag, "overwrite", false, "overwrite existing file.")
 }
 
+func validateFlags() {
+	switch markdownFlag {
+	case "github":
+	default:
+		cmdutil.Exit("unsupported mark down flavour: %v", markdownFlag)
+	}
+
+	switch gopkgSiteFlag {
+	case "pkg.go.dev", "godoc.org":
+	default:
+		cmdutil.Exit("unsupported go pkg site: %v", gopkgSiteFlag)
+	}
+}
+
 func main() {
 	ctx := context.Background()
 	flag.Parse()
@@ -52,17 +66,7 @@ func main() {
 		cmdutil.Exit("failed to run locator: %v", err)
 	}
 
-	switch markdownFlag {
-	case "github":
-	default:
-		cmdutil.Exit("unsupported mark down flavour: %v", markdownFlag)
-	}
-
-	switch gopkgSiteFlag {
-	case "pkg.go.dev", "godoc.org":
-	default:
-		cmdutil.Exit("unsupported go pkg site: %v", gopkgSiteFlag)
-	}
+	validateFlags()
 
 	// Merge the package and any associated test packages into a single
 	// set of ast.Files for use with doc.NewFromFiles.
@@ -95,7 +99,7 @@ func main() {
 			errs.Append(fmt.Errorf("failed to create ast.Package for %v: %v", pkg.PkgPath, err))
 			return
 		}
-		// Merge all of the examples into the single package level examples
+		// Merge all of the examples into the single package level Examples
 		// since the markdown will list all of the examples in one section.
 		examples := docPkg.Examples
 		for _, fneg := range docPkg.Funcs {
