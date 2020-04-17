@@ -57,6 +57,7 @@ func (t *T) addFunctionLocked(desc locateutil.FuncDesc, path string, implements 
 	fqn := desc.Type.FullName()
 	var ifcs []string
 	if len(implements) > 0 {
+		//nolint:gocritic
 		ifcs = append(t.functions[fqn].implements, implements)
 		sort.Strings(ifcs)
 		t.trace("method: %v implementing %v @ %v\n", fqn, implements, desc.Position)

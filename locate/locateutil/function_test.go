@@ -31,6 +31,18 @@ func TestFunction(t *testing.T) {
 		}
 	}
 
+}
+
+func TestFunctiosAndMethods(t *testing.T) {
+	pkgs, err := packages.Load(packagesConfig,
+		"cloudeng.io/go/locate/testdata/data",
+		"cloudeng.io/go/locate/testdata/impl",
+	)
+	if err != nil {
+		t.Errorf("pkg.Load: %v", err)
+	}
+
+	var fns []locateutil.FuncDesc
 	// Top-level functions and methods.
 	fns = nil
 	for _, pkg := range pkgs {

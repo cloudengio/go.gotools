@@ -54,7 +54,7 @@ func TestCopyrightIsPresent(t *testing.T) {
 	out, tmpdir := runit(t, "personal-apache", "cloudeng.io/go/cmd/goannotate/annotators/testdata/copyright")
 	defer os.RemoveAll(tmpdir)
 	original := list(t, filepath.Join("annotators", "testdata", "copyright"))
-	lines := strings.Split(strings.TrimSuffix(string(out), "\n"), "\n")
+	lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
 	sort.Strings(lines)
 	if got, want := strings.Join(lines, "\n"), strings.Join(original, "\n"); got != want {
 		t.Errorf("got %v, want %v", got, want)
