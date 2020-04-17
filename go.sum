@@ -1,5 +1,5 @@
-cloudeng.io/cmdutil v0.0.0-20200414211116-3c1830e6b648 h1:S7mtboPvntq8ACGcqWqIPMcSrs4wvqKo/WwmCp+S6o8=
-cloudeng.io/cmdutil v0.0.0-20200414211116-3c1830e6b648/go.mod h1:XoCeo/dKacPCgeKEVVQoGA3HLsSOtE/6mi9QpALF9tM=
+cloudeng.io/cmdutil v0.0.0-20200417221948-ba45244eb760 h1:oIpvoaIyboA6kN4WSBhnyvYoHOwwtY/EUP5MO1fkGOI=
+cloudeng.io/cmdutil v0.0.0-20200417221948-ba45244eb760/go.mod h1:EfjRRBdGt9BeDOM+2Yt8Eoj/nbDVGQebKbZdgxHcV6M=
 cloudeng.io/errors v0.0.2/go.mod h1:4iZnGEBj5F3SqTHZF6AHiFMgeHeJWJJkVHx/UwbDYok=
 cloudeng.io/errors v0.0.4/go.mod h1:4iZnGEBj5F3SqTHZF6AHiFMgeHeJWJJkVHx/UwbDYok=
 cloudeng.io/errors v0.0.5 h1:NmCUhMIvWQ/0Ny3cBWplA2RXPcnyNUiMovPe64LgX3A=
@@ -34,6 +34,5 @@ golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 h1:E7g+9GITq07hpfrRu66IV
 golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
-gopkg.in/jcmturner/gokrb5.v7 v7.5.0/go.mod h1:l8VISx+WGYp+Fp7KRbsiUuXTTOnxIc3Tuvyavf11/WM=
 gopkg.in/yaml.v2 v2.2.8 h1:obN1ZagJSUGI0Ek/LBmuj4SNLPfIny3KsKFopxRdj10=
 gopkg.in/yaml.v2 v2.2.8/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
