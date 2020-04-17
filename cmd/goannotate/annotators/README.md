@@ -78,16 +78,17 @@ is true.
 ### Type AddLogCall
 ```go
 type AddLogCall struct {
-	Type                 string   `annotator:"name of annotator type."`
-	Name                 string   `annotator:"name of annotation."`
-	Packages             []string `annotator:"packages to be annotated"`
-	Interfaces           []string `annotator:"list of interfaces whose implementations are to have logging calls added to them."`
-	Functions            []string `annotator:"list of functionms that are to have function calls added to them."`
-	ContextType          string   `yaml:"contextType" annotator:"type for the context parameter and result."`
-	Import               string   `annotator:"import patrh for the logging function."`
-	Logcall              string   `annotator:"invocation for the logging function."`
-	IgnoreEmptyFunctions bool     `yaml:"ignoreEmptyFunctions" annotator:"if set empty functions are ignored."`
-	Concurrency          int      `annotator:"the number of goroutines to use, zero for a sensible default."`
+	Type                string   `annotator:"name of annotator type."`
+	Name                string   `annotator:"name of annotation."`
+	Packages            []string `annotator:"packages to be annotated"`
+	Interfaces          []string `annotator:"list of interfaces whose implementations are to have logging calls added to them."`
+	Functions           []string `annotator:"list of functionms that are to have function calls added to them."`
+	ContextType         string   `yaml:"contextType" annotator:"type for the context parameter and result."`
+	Import              string   `annotator:"import patrh for the logging function."`
+	Logcall             string   `annotator:"invocation for the logging function."`
+	AtLeastStatements   int      `yaml:"atLeastStatements" annotator:"the number of statements that must be present in a function in order for it to be annotated."`
+	NoAnnotationComment string   `yaml:"noAnnotationComment" annotator:"do not annotate functions that contain this comment"`
+	Concurrency         int      `annotator:"the number of goroutines to use, zero for a sensible default."`
 
 	// Used for templates.
 	FunctionName string `yaml:",omitempty"`
@@ -163,7 +164,7 @@ RmLogCall represents an annotor for removing logging calls.
 type Spec struct {
 	yaml.MapSlice
 	Name string // Name identifies a particular configuration of an annotator type.
-	Type string // Type identifies the annotation to be peformed.
+	Type string // Type identifies the annotation to be performed.
 }
 ```
 Spec represents the yaml configuration for an annotation. It has a common

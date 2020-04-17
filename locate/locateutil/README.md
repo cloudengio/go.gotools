@@ -31,11 +31,18 @@ FunctionCalls determines if the supplied function declaration contains a
 call 'callname' where callname is either a function name or a selector (eg.
 foo.bar). If deferred is true the function call must be defer'ed.
 
-### Func HasBody
+### Func FunctionHasComment
 ```go
-func HasBody(decl *ast.FuncDecl) bool
+func FunctionHasComment(decl *ast.FuncDecl, cmap ast.CommentMap, text string) bool
 ```
-HasBody returns true of the function has a body.
+FunctionHasComment returns true if any of the comments associated or within
+the function contain the specified text.
+
+### Func FunctionStatements
+```go
+func FunctionStatements(decl *ast.FuncDecl) int
+```
+FunctionStatements returns number of top-level statements in a function.
 
 ### Func ImportBlock
 ```go
