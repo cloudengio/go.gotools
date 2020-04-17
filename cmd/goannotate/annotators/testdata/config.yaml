@@ -8,7 +8,8 @@ annotations:
     contextType: context.Context
     import: cloudeng.io/go/cmd/goannotate/annotators/testdata/apilog 
     logcall: apilog.LogCallf
-    ignoreEmptyFunctions: true
+    atLeastStatements: 1
+    noAnnotationComment: "nologcall:"
   - type: cloudeng.io/go/cmd/goannotate/annotators.RmLogCall
     name: rmlegacy
     interfaces:

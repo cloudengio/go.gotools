@@ -20,3 +20,8 @@ func APINew(n int) error {
 
 func APIEmptyFunc(n int) {
 }
+
+func APINoLogCall(n int) error {
+	// nologcall:
+	return nil
+}

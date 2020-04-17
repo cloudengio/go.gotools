@@ -1,6 +1,7 @@
 package locateutil_test
 
 import (
+	"go/ast"
 	"regexp"
 	"strings"
 	"testing"
@@ -108,18 +109,19 @@ func TestFunctionCalls(t *testing.T) {
 	fns := locateutil.Functions(pkg, regexp.MustCompile(".*"), true)
 
 	expected := []struct {
-		hasBody                   bool
+		statements                int
 		hasFuncCall, hasDeferCall int
+		hasComment                bool
 	}{
-		{false, 0, 0}, // functions.Empty
-		{true, 1, 0},  // functions.Hascall
-		{true, 0, 1},  // functions.HasDefer
-		{true, 0, 0},  // functions.HasOther
-		{true, 0, 0},  // functions.HasOtherdefer
-		{true, 0, 0},  // functions.Expressions
+		{0, 0, 0, false}, // functions.Empty
+		{1, 1, 0, true},  // functions.Hascall
+		{1, 0, 1, true},  // functions.HasDefer
+		{1, 0, 0, false}, // functions.HasOther
+		{1, 0, 0, false}, // functions.HasOtherdefer
+		{4, 0, 0, false}, // functions.Expressions
 	}
 	for i, fn := range fns {
-		if got, want := locateutil.HasBody(fn.Decl), expected[i].hasBody; got != want {
+		if got, want := locateutil.FunctionStatements(fn.Decl), expected[i].statements; got != want {
 			t.Errorf("%v: got %v, want %v", i, got, want)
 		}
 		nodes := locateutil.FunctionCalls(fn.Decl, "ioutil.ReadFile", false)
@@ -128,6 +130,10 @@ func TestFunctionCalls(t *testing.T) {
 		}
 		nodes = locateutil.FunctionCalls(fn.Decl, "ioutil.ReadFile", true)
 		if got, want := len(nodes), expected[i].hasDeferCall; got != want {
+			t.Errorf("%v: got %v, want %v", i, got, want)
+		}
+		cmap := ast.NewCommentMap(fn.Package.Fset, fn.File, fn.File.Comments)
+		if got, want := locateutil.FunctionHasComment(fn.Decl, cmap, "nologcall:"), expected[i].hasComment; got != want {
 			t.Errorf("%v: got %v, want %v", i, got, want)
 		}
 	}
