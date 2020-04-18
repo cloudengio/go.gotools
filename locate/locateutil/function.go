@@ -137,7 +137,7 @@ func (v *funcVisitor) Visit(node ast.Node) ast.Visitor {
 // 'callname' where callname is either a function name or a selector (eg. foo.bar).
 // If deferred is true the function call must be defer'ed.
 func FunctionCalls(decl *ast.FuncDecl, callname string, deferred bool) []ast.Node {
-	if !HasBody(decl) {
+	if len(decl.Body.List) == 0 {
 		return nil
 	}
 	v := &funcVisitor{
@@ -148,7 +148,23 @@ func FunctionCalls(decl *ast.FuncDecl, callname string, deferred bool) []ast.Nod
 	return v.nodes
 }
 
-// HasBody returns true of the function has a body.
-func HasBody(decl *ast.FuncDecl) bool {
-	return len(decl.Body.List) > 0
+// FunctionStatements returns number of top-level statements in a function.
+func FunctionStatements(decl *ast.FuncDecl) int {
+	return len(decl.Body.List)
+}
+
+// FunctionHasComment returns true if any of the comments associated or within
+// the function contain the specified text.
+func FunctionHasComment(decl *ast.FuncDecl, cmap ast.CommentMap, text string) bool {
+	if CommentGroupsContain([]*ast.CommentGroup{decl.Doc}, text) {
+		return true
+	}
+	for _, stmt := range decl.Body.List {
+		if cg := cmap[stmt]; cg != nil {
+			if CommentGroupsContain(cg, text) {
+				return true
+			}
+		}
+	}
+	return false
 }

@@ -27,16 +27,17 @@ import (
 // the entry and exit to every function and method that is matched by the
 // locator.
 type AddLogCall struct {
-	Type                 string   `annotator:"name of annotator type."`
-	Name                 string   `annotator:"name of annotation."`
-	Packages             []string `annotator:"packages to be annotated"`
-	Interfaces           []string `annotator:"list of interfaces whose implementations are to have logging calls added to them."`
-	Functions            []string `annotator:"list of functionms that are to have function calls added to them."`
-	ContextType          string   `yaml:"contextType" annotator:"type for the context parameter and result."`
-	Import               string   `annotator:"import patrh for the logging function."`
-	Logcall              string   `annotator:"invocation for the logging function."`
-	IgnoreEmptyFunctions bool     `yaml:"ignoreEmptyFunctions" annotator:"if set empty functions are ignored."`
-	Concurrency          int      `annotator:"the number of goroutines to use, zero for a sensible default."`
+	Type                string   `annotator:"name of annotator type."`
+	Name                string   `annotator:"name of annotation."`
+	Packages            []string `annotator:"packages to be annotated"`
+	Interfaces          []string `annotator:"list of interfaces whose implementations are to have logging calls added to them."`
+	Functions           []string `annotator:"list of functionms that are to have function calls added to them."`
+	ContextType         string   `yaml:"contextType" annotator:"type for the context parameter and result."`
+	Import              string   `annotator:"import patrh for the logging function."`
+	Logcall             string   `annotator:"invocation for the logging function."`
+	AtLeastStatements   int      `yaml:"atLeastStatements" annotator:"the number of statements that must be present in a function in order for it to be annotated."`
+	NoAnnotationComment string   `yaml:"noAnnotationComment" annotator:"do not annotate functions that contain this comment"`
+	Concurrency         int      `annotator:"the number of goroutines to use, zero for a sensible default."`
 
 	// Used for templates.
 	FunctionName string `yaml:",omitempty"`
@@ -95,6 +96,14 @@ func (lc *AddLogCall) Do(ctx context.Context, root string, pkgs []string) error 
 		return fmt.Errorf("failed to locate functions and/or interface implementations: %v", err)
 	}
 
+	var commentMaps map[*ast.File]ast.CommentMap
+	if len(lc.NoAnnotationComment) > 0 {
+		commentMaps = make(map[*ast.File]ast.CommentMap)
+		locator.WalkFiles(func(absoluteFilename string, pkg *packages.Package, comments ast.CommentMap, file *ast.File, has locate.HitMask) {
+			commentMaps[file] = ast.NewCommentMap(pkg.Fset, file, file.Comments)
+		})
+	}
+
 	dirty := map[string]bool{}
 	edits := map[string][]edit.Delta{}
 	errs := &errors.M{}
@@ -104,8 +113,14 @@ func (lc *AddLogCall) Do(ctx context.Context, root string, pkgs []string) error 
 		fn *types.Func,
 		decl *ast.FuncDecl,
 		implements []string) {
-		if lc.IgnoreEmptyFunctions && !locateutil.HasBody(decl) {
+		if locateutil.FunctionStatements(decl) < lc.AtLeastStatements {
 			return
+		}
+		if len(lc.NoAnnotationComment) > 0 {
+			cmap := commentMaps[file]
+			if locateutil.FunctionHasComment(decl, cmap, lc.NoAnnotationComment) {
+				return
+			}
 		}
 		invovation, comment, err := lc.annotationForFunc(pkg.Fset, fn, decl)
 		if err != nil {
@@ -182,7 +197,7 @@ func (lc *AddLogCall) alreadyImported(file *ast.File, path string) bool {
 }
 
 func (lc *AddLogCall) alreadyAnnotated(fset *token.FileSet, file *ast.File, fn *types.Func, decl *ast.FuncDecl, comment string) bool {
-	if !locateutil.HasBody(decl) {
+	if locateutil.FunctionStatements(decl) == 0 {
 		return false
 	}
 	deferStmt, ok := decl.Body.List[0].(*ast.DeferStmt)

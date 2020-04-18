@@ -6,6 +6,8 @@ annotations:
   # be compiled in to the goannotate binary priort to it being usable here.
   # The --list command will provide documentation on the current set of compiled
   # in annotators.
+    # AddLogcall annotates functions with a logging call that records
+    # entry/exit from them. The example here is appropriate for vanadium.
   - type: cloudeng.io/go/cmd/goannotate/annotators.AddLogCall
     name: vanadium-add-logcall
     # Packages specifies the packages to be annotated. It may be overriden
@@ -19,13 +21,19 @@ annotations:
     functions:
     # contextType is the context type used by this API.
     contextType: v.io/v23/context.T
-    # import is the import path for the logging call to be added.
+    # Import is the import path for the logging call to be added.
     import: v.io/x/ref/lib/apilog
     # logcall is the import path itself.
-    logcall: apilog.LogCallf2
-    # if ignoreEmptyFunctions is true empty functions (no body or a single
-    # return statement) will be ignored.
-    ignoreEmptyFunctions: true
+    logcall: apilog.LogCallf
+    # Functions must have at least this number of top-level statements to
+    # be worth annotating.
+    atLeastStatements: 1
+    # Do not annotate functions which have this text in any comments associated
+    # with or within the function.
+    noAnnotationComment: "nologcall:"
+    # RmLogCall removes annotations previously added to log entry/exit
+    # from a specified set of functions. The example here is appropriate for
+    # vanadium.
   - type: cloudeng.io/go/cmd/goannotate/annotators.RmLogCall
     name: vanadium-rm-logcall
     packages:
@@ -36,6 +44,8 @@ annotations:
     logcall: apilog.LogCallf
     comment: "gologcop: DO NOT EDIT, MUST BE FIRST STATEMENT"
     deferred: true
+    # EnsureCopyrightAndLicense ensures that the specified copyright and license
+    # is present at the top of every go file.
   - type: cloudeng.io/go/cmd/goannotate/annotators.EnsureCopyrightAndLicense
     name: personal-copyright
     copyright: "// Copyright 2020 Cosmos Nicolaou. All rights reserved."
@@ -47,6 +57,8 @@ annotations:
     license: "// Use of this source code is governed by the Apache-2.0\n
 // license that can be found in the LICENSE file."
 options:
+  # Default concurrency.
   concurrency: 0
 debug:
+  # Provide a file name here to enable cpu profiling.
   cpu_profile:

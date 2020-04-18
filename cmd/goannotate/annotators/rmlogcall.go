@@ -72,7 +72,7 @@ func (rc *RmLogCall) Do(ctx context.Context, root string, pkgs []string) error {
 		fn *types.Func,
 		decl *ast.FuncDecl,
 		implements []string) {
-		if !locateutil.HasBody(decl) {
+		if locateutil.FunctionStatements(decl) == 0 {
 			return
 		}
 		cmap := ast.NewCommentMap(pkg.Fset, file, file.Comments)

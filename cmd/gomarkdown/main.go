@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"cloudeng.io/cmdutil"
+	"cloudeng.io/cmdutil/flags"
 	"cloudeng.io/errors"
 	"cloudeng.io/go/locate"
 	"golang.org/x/tools/go/packages"
@@ -39,20 +40,6 @@ func init() {
 	flag.BoolVar(&overwriteFlag, "overwrite", false, "overwrite existing file.")
 }
 
-func validateFlags() {
-	switch markdownFlag {
-	case "github":
-	default:
-		cmdutil.Exit("unsupported mark down flavour: %v", markdownFlag)
-	}
-
-	switch gopkgSiteFlag {
-	case "pkg.go.dev", "godoc.org":
-	default:
-		cmdutil.Exit("unsupported go pkg site: %v", gopkgSiteFlag)
-	}
-}
-
 func main() {
 	ctx := context.Background()
 	flag.Parse()
@@ -66,7 +53,12 @@ func main() {
 		cmdutil.Exit("failed to run locator: %v", err)
 	}
 
-	validateFlags()
+	if err := flags.OneOf(markdownFlag).Validate("github"); err != nil {
+		cmdutil.Exit("%s", err)
+	}
+	if err := flags.OneOf(gopkgSiteFlag).Validate("pkg.go.dev", "godoc.org"); err != nil {
+		cmdutil.Exit("%s", err)
+	}
 
 	// Merge the package and any associated test packages into a single
 	// set of ast.Files for use with doc.NewFromFiles.
