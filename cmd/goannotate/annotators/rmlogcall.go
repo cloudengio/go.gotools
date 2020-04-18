@@ -10,6 +10,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"regexp"
 
 	"cloudeng.io/go/locate"
 	"cloudeng.io/go/locate/locateutil"
@@ -52,6 +53,10 @@ func (rc *RmLogCall) Describe() string {
 
 // Do implements annotators.Annotation.
 func (rc *RmLogCall) Do(ctx context.Context, root string, pkgs []string) error {
+	logcallRE, err := regexp.Compile(rc.Logcall)
+	if err != nil {
+		return err
+	}
 	locator := locate.New(
 		concurrencyOpt(rc.Concurrency),
 		locate.Trace(Verbosef),
@@ -75,9 +80,12 @@ func (rc *RmLogCall) Do(ctx context.Context, root string, pkgs []string) error {
 		if locateutil.FunctionStatements(decl) == 0 {
 			return
 		}
-		cmap := ast.NewCommentMap(pkg.Fset, file, file.Comments)
-		nodes := locateutil.FunctionCalls(decl, rc.Logcall, rc.Deferred)
+		nodes := locateutil.FunctionCalls(decl, logcallRE, rc.Deferred)
+		if len(nodes) == 0 {
+			return
+		}
 		var start, end token.Pos
+		cmap := ast.NewCommentMap(pkg.Fset, file, file.Comments)
 		for _, node := range nodes {
 			start = node.Pos()
 			end = node.End()

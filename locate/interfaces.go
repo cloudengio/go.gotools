@@ -49,12 +49,7 @@ func (t *T) findEmbeddedInterfaces(ctx context.Context, pkgPath string, ifcType 
 		obj := named.Obj()
 		epkg := obj.Pkg()
 		if epath := epkg.Path(); epath != pkgPath {
-			// Treat the external embedded interface as if it was
-			// directly requested.
-			re, _ := regexp.Compile(obj.Name() + "$")
-			if err := t.findInterfacesInPackage(ctx, epath, re); err != nil {
-				return nil, err
-			}
+			// ignore embeded interfaces from other packages.
 			continue
 		}
 		// Record the name of the locally defined embedded interfaces

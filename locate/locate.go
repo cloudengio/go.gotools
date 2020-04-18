@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 
+	"cloudeng.io/errors"
 	"cloudeng.io/sync/errgroup"
 	"golang.org/x/tools/go/packages"
 )
@@ -143,7 +144,8 @@ func (t *T) trace(format string, args ...interface{}) {
 
 // AddInterfaces adds interfaces whose implementations are to be located.
 // The interface names are specified as fully qualified type names with a
-// regular expression being accepted for the package local component.
+// regular expression being accepted for the package local component, or
+// as a go list expression (ie. one that starts with ./ or contains '...').
 // For example, all of the following match all interfaces in
 // acme.com/a/b:
 //   acme.com/a/b
@@ -153,9 +155,9 @@ func (t *T) trace(format string, args ...interface{}) {
 // regular expression. The following will match a subset of the interfaces:
 //   acme.com/a/b.prefix
 //   acme.com/a/b.thisInterface$
+// Note that the two forms 'go list' and <package>.<regex> cannot be combined.
 func (t *T) AddInterfaces(interfaces ...string) {
 	t.interfacePackages = append(t.interfacePackages, interfaces...)
-
 }
 
 // AddFunctions adds functions to be located. The function names are specified
@@ -179,22 +181,25 @@ func (t *T) AddComments(comments ...string) {
 
 // Do locates implementations of previously added interfaces and functions.
 func (t *T) Do(ctx context.Context) error {
-	interfaces := dedup(t.interfacePackages)
-	functions := dedup(t.functionPackages)
+	errs := errors.M{}
+	interfaces, err := listPackagesOrSpecs(ctx, t.interfacePackages)
+	errs.Append(err)
+	functions, err := listPackagesOrSpecs(ctx, t.functionPackages)
+	errs.Append(err)
 	var packages []string
 	if len(t.implementationPackages) > 0 {
-		var err error
 		packages, err = listPackages(ctx, t.implementationPackages)
-		if err != nil {
-			return err
-		}
+		errs.Append(err)
 	}
+	if err := errs.Err(); err != nil {
+		return err
+	}
+
 	packages = dedup(packages)
 	allPackages, err := packagesToLoad(ctx, interfaces, functions, packages)
 	if err != nil {
 		return err
 	}
-
 	comments := dedup(t.commentExpressions)
 	if err := t.loader.loadPaths(allPackages, t.options.tests); err != nil {
 		return err
@@ -228,6 +233,33 @@ func sorter(sorted []sortByPos) {
 		}
 		return sorted[i].pos.Filename < sorted[j].pos.Filename
 	})
+}
+
+// IsGoListPath returns true if path will be passed to 'go list' to be resolved
+// rather than being treated as a <package>.<regex> spec.
+func IsGoListPath(path string) bool {
+	return strings.HasPrefix(path, "./") || strings.HasPrefix(path, "../") ||
+		strings.Contains(path, "...")
+}
+
+func listPackagesOrSpecs(ctx context.Context, specs []string) ([]string, error) {
+	var expanded []string
+	var tolist []string
+	for _, spec := range specs {
+		if IsGoListPath(spec) {
+			tolist = append(tolist, spec)
+			continue
+		}
+		expanded = append(expanded, spec)
+	}
+	if len(tolist) > 0 {
+		listed, err := listPackages(ctx, tolist)
+		if err != nil {
+			return nil, err
+		}
+		expanded = append(expanded, listed...)
+	}
+	return dedup(expanded), nil
 }
 
 func listPackages(ctx context.Context, packages []string) ([]string, error) {

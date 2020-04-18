@@ -124,11 +124,11 @@ func TestFunctionCalls(t *testing.T) {
 		if got, want := locateutil.FunctionStatements(fn.Decl), expected[i].statements; got != want {
 			t.Errorf("%v: got %v, want %v", i, got, want)
 		}
-		nodes := locateutil.FunctionCalls(fn.Decl, "ioutil.ReadFile", false)
+		nodes := locateutil.FunctionCalls(fn.Decl, regexp.MustCompile("ioutil.ReadFile"), false)
 		if got, want := len(nodes), expected[i].hasFuncCall; got != want {
 			t.Errorf("%v: got %v, want %v", i, got, want)
 		}
-		nodes = locateutil.FunctionCalls(fn.Decl, "ioutil.ReadFile", true)
+		nodes = locateutil.FunctionCalls(fn.Decl, regexp.MustCompile("ioutil.Read.*"), true)
 		if got, want := len(nodes), expected[i].hasDeferCall; got != want {
 			t.Errorf("%v: got %v, want %v", i, got, want)
 		}
