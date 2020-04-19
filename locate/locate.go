@@ -10,6 +10,7 @@ package locate
 import (
 	"context"
 	"fmt"
+	"go/ast"
 	"go/token"
 	"os/exec"
 	"sort"
@@ -218,6 +219,18 @@ func (t *T) Do(ctx context.Context) error {
 		return t.findComments(ctx, comments)
 	})
 	return grp.Wait()
+}
+
+// MakeCommentMaps creates a new ast.CommentMap for every processed file.
+// CommentMaps are expensive to create and hence should be created once and
+// reused.
+func (t *T) MakeCommentMaps() map[*ast.File]ast.CommentMap {
+	cmaps := map[*ast.File]ast.CommentMap{}
+	t.WalkFiles(func(absoluteFilename string, pkg *packages.Package, comments ast.CommentMap, file *ast.File, has HitMask) {
+		cmaps[file] = ast.NewCommentMap(pkg.Fset, file, file.Comments)
+
+	})
+	return cmaps
 }
 
 type sortByPos struct {

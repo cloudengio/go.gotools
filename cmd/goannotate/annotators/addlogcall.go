@@ -96,13 +96,7 @@ func (lc *AddLogCall) Do(ctx context.Context, root string, pkgs []string) error 
 		return fmt.Errorf("failed to locate functions and/or interface implementations: %v", err)
 	}
 
-	var commentMaps map[*ast.File]ast.CommentMap
-	if len(lc.NoAnnotationComment) > 0 {
-		commentMaps = make(map[*ast.File]ast.CommentMap)
-		locator.WalkFiles(func(absoluteFilename string, pkg *packages.Package, comments ast.CommentMap, file *ast.File, has locate.HitMask) {
-			commentMaps[file] = ast.NewCommentMap(pkg.Fset, file, file.Comments)
-		})
-	}
+	commentMaps := locator.MakeCommentMaps()
 
 	dirty := map[string]bool{}
 	edits := map[string][]edit.Delta{}
@@ -127,7 +121,7 @@ func (lc *AddLogCall) Do(ctx context.Context, root string, pkgs []string) error 
 			errs.Append(err)
 			return
 		}
-		if lc.alreadyAnnotated(pkg.Fset, file, fn, decl, comment) {
+		if lc.alreadyAnnotated(fn, decl, commentMaps[file], comment) {
 			Verbosef("%v: already annotated\n", fullname)
 			return
 		}
@@ -196,7 +190,7 @@ func (lc *AddLogCall) alreadyImported(file *ast.File, path string) bool {
 	return false
 }
 
-func (lc *AddLogCall) alreadyAnnotated(fset *token.FileSet, file *ast.File, fn *types.Func, decl *ast.FuncDecl, comment string) bool {
+func (lc *AddLogCall) alreadyAnnotated(fn *types.Func, decl *ast.FuncDecl, cmap ast.CommentMap, comment string) bool {
 	if locateutil.FunctionStatements(decl) == 0 {
 		return false
 	}
@@ -204,7 +198,6 @@ func (lc *AddLogCall) alreadyAnnotated(fset *token.FileSet, file *ast.File, fn *
 	if !ok {
 		return false
 	}
-	cmap := ast.NewCommentMap(fset, file, file.Comments)
 	comments := cmap[deferStmt]
 	for _, c := range comments {
 		if c := c.Text(); strings.HasPrefix(c, comment) {

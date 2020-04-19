@@ -70,6 +70,8 @@ func (rc *RmLogCall) Do(ctx context.Context, root string, pkgs []string) error {
 		return fmt.Errorf("failed to locate functions and/or interface implementations: %v", err)
 	}
 
+	commentMaps := locator.MakeCommentMaps()
+
 	edits := map[string][]edit.Delta{}
 	locator.WalkFunctions(func(fullname string,
 		pkg *packages.Package,
@@ -85,7 +87,7 @@ func (rc *RmLogCall) Do(ctx context.Context, root string, pkgs []string) error {
 			return
 		}
 		var start, end token.Pos
-		cmap := ast.NewCommentMap(pkg.Fset, file, file.Comments)
+		cmap := commentMaps[file]
 		for _, node := range nodes {
 			start = node.Pos()
 			end = node.End()
