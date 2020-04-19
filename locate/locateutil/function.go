@@ -86,18 +86,18 @@ func findFuncOrMethodDecl(fn *types.Func, file *ast.File) *ast.FuncDecl {
 }
 
 type funcVisitor struct {
-	callname string
+	callname *regexp.Regexp
 	deferred bool
 	nodes    []ast.Node
 }
 
-func callMatches(callexpr *ast.CallExpr, callname string) bool {
+func callMatches(callexpr *ast.CallExpr, callname *regexp.Regexp) bool {
 	switch id := callexpr.Fun.(type) {
 	case *ast.Ident:
-		return id.String() == callname
+		return callname.MatchString(id.String())
 	case *ast.SelectorExpr:
 		if sel, ok := id.X.(*ast.Ident); ok {
-			return (sel.String() + "." + id.Sel.String()) == callname
+			return callname.MatchString(sel.String() + "." + id.Sel.String())
 		}
 	case *ast.CallExpr:
 		r := callMatches(id, callname)
@@ -136,7 +136,7 @@ func (v *funcVisitor) Visit(node ast.Node) ast.Visitor {
 // FunctionCalls determines if the supplied function declaration contains a call
 // 'callname' where callname is either a function name or a selector (eg. foo.bar).
 // If deferred is true the function call must be defer'ed.
-func FunctionCalls(decl *ast.FuncDecl, callname string, deferred bool) []ast.Node {
+func FunctionCalls(decl *ast.FuncDecl, callname *regexp.Regexp, deferred bool) []ast.Node {
 	if len(decl.Body.List) == 0 {
 		return nil
 	}

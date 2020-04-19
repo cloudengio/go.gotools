@@ -90,19 +90,16 @@ func (lc *AddLogCall) Do(ctx context.Context, root string, pkgs []string) error 
 	)
 	locator.AddInterfaces(lc.Interfaces...)
 	locator.AddFunctions(lc.Functions...)
+	if len(pkgs) == 0 {
+		pkgs = lc.Packages
+	}
 	locator.AddPackages(pkgs...)
 	Verbosef("locating functions to be annotated with a logcall...")
 	if err := locator.Do(ctx); err != nil {
 		return fmt.Errorf("failed to locate functions and/or interface implementations: %v", err)
 	}
 
-	var commentMaps map[*ast.File]ast.CommentMap
-	if len(lc.NoAnnotationComment) > 0 {
-		commentMaps = make(map[*ast.File]ast.CommentMap)
-		locator.WalkFiles(func(absoluteFilename string, pkg *packages.Package, comments ast.CommentMap, file *ast.File, has locate.HitMask) {
-			commentMaps[file] = ast.NewCommentMap(pkg.Fset, file, file.Comments)
-		})
-	}
+	commentMaps := locator.MakeCommentMaps()
 
 	dirty := map[string]bool{}
 	edits := map[string][]edit.Delta{}
@@ -127,7 +124,7 @@ func (lc *AddLogCall) Do(ctx context.Context, root string, pkgs []string) error 
 			errs.Append(err)
 			return
 		}
-		if lc.alreadyAnnotated(pkg.Fset, file, fn, decl, comment) {
+		if lc.alreadyAnnotated(fn, decl, commentMaps[file], comment) {
 			Verbosef("%v: already annotated\n", fullname)
 			return
 		}
@@ -196,7 +193,7 @@ func (lc *AddLogCall) alreadyImported(file *ast.File, path string) bool {
 	return false
 }
 
-func (lc *AddLogCall) alreadyAnnotated(fset *token.FileSet, file *ast.File, fn *types.Func, decl *ast.FuncDecl, comment string) bool {
+func (lc *AddLogCall) alreadyAnnotated(fn *types.Func, decl *ast.FuncDecl, cmap ast.CommentMap, comment string) bool {
 	if locateutil.FunctionStatements(decl) == 0 {
 		return false
 	}
@@ -204,7 +201,6 @@ func (lc *AddLogCall) alreadyAnnotated(fset *token.FileSet, file *ast.File, fn *
 	if !ok {
 		return false
 	}
-	cmap := ast.NewCommentMap(fset, file, file.Comments)
 	comments := cmap[deferStmt]
 	for _, c := range comments {
 		if c := c.Text(); strings.HasPrefix(c, comment) {
@@ -223,13 +219,13 @@ func (lc *AddLogCall) annotationForFunc(fset *token.FileSet, fn *types.Func, dec
 	}
 	params, paramArgs := derive.ArgsForParams(sig, ignore...)
 	results, resultArgs := derive.ArgsForResults(sig)
-	if !hasContext {
+	if !hasContext || len(ctxParam) == 0 {
 		ctxParam = "nil"
 	}
 	call, comment := &strings.Builder{}, &strings.Builder{}
 	pos := fset.Position(decl.Pos())
-	parent, base := filepath.Base(filepath.Dir(pos.Filename)), filepath.Base(pos.Filename)
-	location := fmt.Sprintf("%s%c%s:%d", parent, filepath.Separator, base, pos.Line)
+	base := filepath.Base(pos.Filename)
+	location := fmt.Sprintf("%s:%d", base, pos.Line)
 	lc.ContextParam = ctxParam
 	lc.Tag = lc.Type
 	lc.FunctionName = fn.Pkg().Path() + "." + fn.Name()

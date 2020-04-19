@@ -81,13 +81,11 @@ func TestEmbeddedInterfaces(t *testing.T) {
 		here + "data/embedded.IfcE1",
 		here + "data/embedded.IfcE2",
 		here + "data/embedded.ifcE3",
-		here + "data/embedded/pkg.Pkg",
 	}, []string{
 		filepath.Join("data", "embedded", "embedded.go") + ":18:6",
 		filepath.Join("data", "embedded", "embedded.go") + ":5:6",
 		filepath.Join("data", "embedded", "embedded.go") + ":9:6",
 		filepath.Join("data", "embedded", "embedded.go") + ":13:6",
-		filepath.Join("data", "embedded", "pkg", "interface.go") + ":3:6",
 	})
 	compareFiles(t, listFiles(locator),
 		filepath.Join("data", "embedded", "embedded.go")+": embedded",

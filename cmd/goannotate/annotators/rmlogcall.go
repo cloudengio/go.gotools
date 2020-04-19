@@ -10,6 +10,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"regexp"
 
 	"cloudeng.io/go/locate"
 	"cloudeng.io/go/locate/locateutil"
@@ -52,6 +53,10 @@ func (rc *RmLogCall) Describe() string {
 
 // Do implements annotators.Annotation.
 func (rc *RmLogCall) Do(ctx context.Context, root string, pkgs []string) error {
+	logcallRE, err := regexp.Compile(rc.Logcall)
+	if err != nil {
+		return err
+	}
 	locator := locate.New(
 		concurrencyOpt(rc.Concurrency),
 		locate.Trace(Verbosef),
@@ -59,11 +64,16 @@ func (rc *RmLogCall) Do(ctx context.Context, root string, pkgs []string) error {
 	)
 	locator.AddInterfaces(rc.Interfaces...)
 	locator.AddFunctions(rc.Functions...)
+	if len(pkgs) == 0 {
+		pkgs = rc.Packages
+	}
 	locator.AddPackages(pkgs...)
 	Verbosef("locating functions to have a logcall annotation removal...")
 	if err := locator.Do(ctx); err != nil {
 		return fmt.Errorf("failed to locate functions and/or interface implementations: %v", err)
 	}
+
+	commentMaps := locator.MakeCommentMaps()
 
 	edits := map[string][]edit.Delta{}
 	locator.WalkFunctions(func(fullname string,
@@ -75,9 +85,12 @@ func (rc *RmLogCall) Do(ctx context.Context, root string, pkgs []string) error {
 		if locateutil.FunctionStatements(decl) == 0 {
 			return
 		}
-		cmap := ast.NewCommentMap(pkg.Fset, file, file.Comments)
-		nodes := locateutil.FunctionCalls(decl, rc.Logcall, rc.Deferred)
+		nodes := locateutil.FunctionCalls(decl, logcallRE, rc.Deferred)
+		if len(nodes) == 0 {
+			return
+		}
 		var start, end token.Pos
+		cmap := commentMaps[file]
 		for _, node := range nodes {
 			start = node.Pos()
 			end = node.End()

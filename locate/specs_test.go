@@ -12,6 +12,7 @@ func TestParseNameAndRegexp(t *testing.T) {
 		{".", "", ""},
 		{".a", "", "a"},
 		{"a.b", "a", "b"},
+		{"a.com/b", "a.com/b", ".*"},
 		{"/x/y/z/a.b", "/x/y/z/a", "b"},
 		{"/x/y/z/a.", "/x/y/z/a", ""},
 		{"/x/y/z/a..*", "/x/y/z/a", ".*"},
