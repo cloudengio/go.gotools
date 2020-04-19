@@ -64,6 +64,9 @@ func (rc *RmLogCall) Do(ctx context.Context, root string, pkgs []string) error {
 	)
 	locator.AddInterfaces(rc.Interfaces...)
 	locator.AddFunctions(rc.Functions...)
+	if len(pkgs) == 0 {
+		pkgs = rc.Packages
+	}
 	locator.AddPackages(pkgs...)
 	Verbosef("locating functions to have a logcall annotation removal...")
 	if err := locator.Do(ctx); err != nil {

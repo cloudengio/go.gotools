@@ -90,6 +90,9 @@ func (lc *AddLogCall) Do(ctx context.Context, root string, pkgs []string) error 
 	)
 	locator.AddInterfaces(lc.Interfaces...)
 	locator.AddFunctions(lc.Functions...)
+	if len(pkgs) == 0 {
+		pkgs = lc.Packages
+	}
 	locator.AddPackages(pkgs...)
 	Verbosef("locating functions to be annotated with a logcall...")
 	if err := locator.Do(ctx); err != nil {
@@ -216,13 +219,13 @@ func (lc *AddLogCall) annotationForFunc(fset *token.FileSet, fn *types.Func, dec
 	}
 	params, paramArgs := derive.ArgsForParams(sig, ignore...)
 	results, resultArgs := derive.ArgsForResults(sig)
-	if !hasContext {
+	if !hasContext || len(ctxParam) == 0 {
 		ctxParam = "nil"
 	}
 	call, comment := &strings.Builder{}, &strings.Builder{}
 	pos := fset.Position(decl.Pos())
-	parent, base := filepath.Base(filepath.Dir(pos.Filename)), filepath.Base(pos.Filename)
-	location := fmt.Sprintf("%s%c%s:%d", parent, filepath.Separator, base, pos.Line)
+	base := filepath.Base(pos.Filename)
+	location := fmt.Sprintf("%s:%d", base, pos.Line)
 	lc.ContextParam = ctxParam
 	lc.Tag = lc.Type
 	lc.FunctionName = fn.Pkg().Path() + "." + fn.Name()
