@@ -22,8 +22,10 @@ import (
 type EnsureCopyrightAndLicense struct {
 	EssentialOptions `yaml:",inline"`
 
-	Copyright string `yaml:"copyright" annotator:"desired copyright notice."`
-	License   string `yaml:"license" annotator:"desired license notice."`
+	Copyright       string `yaml:"copyright" annotator:"desired copyright notice."`
+	License         string `yaml:"license" annotator:"desired license notice."`
+	UpdateCopyright bool   `yaml:"updateCopyright", annotator:"set to true to update existing copyright notice"`
+	UpdateLicense   bool   `yaml:"updateLicense", annotator:"set to true to update existing license notice"`
 }
 
 func init() {
@@ -61,6 +63,9 @@ func (ec *EnsureCopyrightAndLicense) Do(ctx context.Context, root string, pkgs [
 		locate.IgnoreMissingFuctionsEtc(),
 		locate.IncludeTests(),
 	)
+	if len(pkgs) == 0 {
+		pkgs = ec.Packages
+	}
 	locator.AddPackages(pkgs...)
 	Verbosef("locating functions to have a copyright/license annotation...")
 	if err := locator.Do(ctx); err != nil {
@@ -99,8 +104,10 @@ func (ec *EnsureCopyrightAndLicense) Do(ctx context.Context, root string, pkgs [
 		}
 		var deltas []edit.Delta
 		if copyright != nil {
-			deltas = append(deltas, edit.ReplaceString(0, len(copyright.Text)+1, newCopyright))
-			if licenseStart != 0 && len(ec.License) > 0 {
+			if ec.UpdateCopyright {
+				deltas = append(deltas, edit.ReplaceString(0, len(copyright.Text)+1, newCopyright))
+			}
+			if licenseStart != 0 && len(ec.License) > 0 && ec.UpdateLicense {
 				deltas = append(deltas, edit.ReplaceString(licenseStart, licenseLen, newLicense))
 			}
 		} else {

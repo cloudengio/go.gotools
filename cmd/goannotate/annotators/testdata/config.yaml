@@ -10,8 +10,9 @@ annotations:
     callGenerator:
       type: cloudeng.io/go/cmd/goannotate/annotators/functions.LogCallWithContext
       contextType: context.Context
-      importPath: cloudeng.io/go/cmd/goannotate/annotators/testdata/apilog 
+      importPath: cloudeng.io/go/cmd/goannotate/annotators/testdata/apilog
       functionName: apilog.LogCallf
+
   - type: cloudeng.io/go/cmd/goannotate/annotators.RmLogCall
     name: rmlegacy
     interfaces:
@@ -21,6 +22,7 @@ annotations:
     functionNameRE: apilog.LogCallfLegacy
     comment: "gologcop: DO NOT EDIT, MUST BE FIRST STATEMENT"
     deferred: true
+
   - type: cloudeng.io/go/cmd/goannotate/annotators.RmLogCall
     name: rmlegacy-nodefer
     interfaces:
@@ -30,10 +32,22 @@ annotations:
     functionNameRE: apilog.LogCallfLegacy
     comment: "gologcop: DO NOT EDIT, MUST BE FIRST STATEMENT"
     deferred: false
+
   - type: cloudeng.io/go/cmd/goannotate/annotators.EnsureCopyrightAndLicense
     name: personal-apache
     copyright: "// Copyright 2020 Cosmos Nicolaou. All rights reserved."
-    license: "// Use of this source code is governed by the Apache-2.0\n
-// license that can be found in the LICENSE file."
+    license: |
+      // Use of this source code is governed by the Apache-2.0
+      // license that can be found in the LICENSE file.
+
+  - type: cloudeng.io/go/cmd/goannotate/annotators.EnsureCopyrightAndLicense
+    name: personal-apache-update
+    updateCopyright: true
+    updateLicense: true
+    copyright: "// Copyright 2020 Cosmos Nicolaou. All rights reserved."
+    license: |
+      // Use of this source code is governed by the Apache-2.0
+      // license that can be found in the LICENSE file.
+
 options:
   concurrency: 1

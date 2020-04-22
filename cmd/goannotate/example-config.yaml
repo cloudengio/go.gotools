@@ -49,6 +49,7 @@ annotations:
     functionNameRE: apilog.LogCallf
     comment: "gologcop: DO NOT EDIT, MUST BE FIRST STATEMENT"
     deferred: true
+
     # EnsureCopyrightAndLicense ensures that the specified copyright and license
     # is present at the top of every go file.
   - type: cloudeng.io/go/cmd/goannotate/annotators.EnsureCopyrightAndLicense
@@ -59,11 +60,14 @@ annotations:
   - type: cloudeng.io/go/cmd/goannotate/annotators.EnsureCopyrightAndLicense
     name: cloudeng-copyright
     copyright: "// Copyright 2020 cloudeng llc. All rights reserved."
-    license: "// Use of this source code is governed by the Apache-2.0\n
-// license that can be found in the LICENSE file."
+    license: |
+      // Use of this source code is governed by the Apache-2.0
+      // license that can be found in the LICENSE file.
+
 options:
   # Default concurrency.
   concurrency: 0
-debug:
+
+  debug:
   # Provide a file name here to enable cpu profiling.
   cpu_profile:
