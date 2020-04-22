@@ -14,6 +14,23 @@ import (
 )
 
 var expectedPersonalApache = []testutil.DiffReport{
+	{Name: "cloudeng.go", Diff: ""},
+	{Name: "empty.go", Diff: `0a1,4
+> // Copyright 2020 Cosmos Nicolaou. All rights reserved.
+> // Use of this source code is governed by the Apache-2.0
+> // license that can be found in the LICENSE file.
+> 
+`},
+	{Name: "packagecomment.go", Diff: `0a1,4
+> // Copyright 2020 Cosmos Nicolaou. All rights reserved.
+> // Use of this source code is governed by the Apache-2.0
+> // license that can be found in the LICENSE file.
+> 
+`},
+	{Name: "personal.go", Diff: ""},
+}
+
+var expectedPersonalApacheUpdate = []testutil.DiffReport{
 	{Name: "cloudeng.go", Diff: `1c1
 < // Copyright 2020 cloudeng llc. All rights reserved.
 ---
@@ -45,4 +62,12 @@ func TestCopyright(t *testing.T) {
 	original, copies := list(t, filepath.Join("testdata", "copyright")), list(t, tmpdir)
 	diffs := testutil.DiffMultipleFiles(t, original, copies)
 	testutil.CompareDiffReports(t, diffs, expectedPersonalApache)
+
+	err = annotators.Lookup("personal-apache-update").Do(ctx, tmpdir, []string{here + "copyright"})
+	if err != nil {
+		t.Errorf("Do: %v", err)
+	}
+	original, copies = list(t, filepath.Join("testdata", "copyright")), list(t, tmpdir)
+	diffs = testutil.DiffMultipleFiles(t, original, copies)
+	testutil.CompareDiffReports(t, diffs, expectedPersonalApacheUpdate)
 }
