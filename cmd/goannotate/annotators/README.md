@@ -113,8 +113,8 @@ type EnsureCopyrightAndLicense struct {
 
 	Copyright       string `yaml:"copyright" annotator:"desired copyright notice."`
 	License         string `yaml:"license" annotator:"desired license notice."`
-	UpdateCopyright bool   `yaml:"updateCopyright", annotator:"set to true to update existing copyright notice"`
-	UpdateLicense   bool   `yaml:"updateLicense", annotator:"set to true to update existing license notice"`
+	UpdateCopyright bool   `yaml:"updateCopyright" annotator:"set to true to update existing copyright notice"`
+	UpdateLicense   bool   `yaml:"updateLicense" annotator:"set to true to update existing license notice"`
 }
 ```
 EnsureCopyrightAndLicense represents an annotator that can insert or replace
