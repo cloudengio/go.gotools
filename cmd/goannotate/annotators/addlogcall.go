@@ -62,6 +62,10 @@ func (lc *AddLogCall) Describe() string {
 	out.WriteString("\n")
 	out.WriteString("    Available Call Generators:\n\n")
 	for _, cg := range functions.CallGenerators() {
+		out.WriteString("    " + cg + "\n")
+	}
+	out.WriteString("\n")
+	for _, cg := range functions.CallGenerators() {
 		out.WriteString(internal.Indent(functions.Lookup(cg).Describe(), 4))
 		out.WriteString("\n")
 	}

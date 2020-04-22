@@ -39,6 +39,9 @@
 //
 //     Available Call Generators:
 //
+//     cloudeng.io/go/cmd/goannotate/annotators/functions.LogCallWithContext
+//     cloudeng.io/go/cmd/goannotate/annotators/functions.SimpleLogCall
+//
 //     cloudeng.io/go/cmd/goannotate/annotators/functions.LogCallWithContext:
 //     LogCallWithContext provides a functon call generator for generating calls to
 //     functions with the following signature:

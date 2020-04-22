@@ -75,7 +75,7 @@ func (lc *LogCallWithContext) Generate(fset *token.FileSet, fn *types.Func, decl
 	}
 	params, paramArgs := derive.ArgsForParams(sig, ignore...)
 	results, resultArgs := derive.ArgsForResults(sig)
-	if !hasContext || len(ctxParam) == 0 {
+	if !hasContext || len(ctxParam) == 0 || ctxParam == "_" {
 		ctxParam = "nil"
 	}
 	call := &strings.Builder{}

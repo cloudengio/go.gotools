@@ -3,9 +3,11 @@ annotations:
   # configuration for each annotation depends on the annotator itself except
   # that all annotators must have a 'type' key that names the go type of tha
   # annotator and a 'name' key than names the annotation. Each annotator must
-  # be compiled in to the goannotate binary priort to it being usable here.
+  # be compiled into the goannotate binary priort to it being usable here.
   # The --list command will provide documentation on the current set of compiled
-  # in annotators.
+  # in annotators. The --list-config command will show the available annotations
+  # read from the config file being used.
+
     # AddLogcall annotates functions with a logging call that records
     # entry/exit from them. The example here is appropriate for vanadium.
   - type: cloudeng.io/go/cmd/goannotate/annotators.AddLogCall
@@ -19,18 +21,21 @@ annotations:
       - "v.io/v23/namespace"
     # Functions lists the functions that define the API.
     functions:
-    # contextType is the context type used by this API.
-    contextType: v.io/v23/context.T
-    # Import is the import path for the logging call to be added.
-    import: v.io/x/ref/lib/apilog
-    # logcall is the import path itself.
-    logcall: apilog.LogCallf
     # Functions must have at least this number of top-level statements to
     # be worth annotating.
     atLeastStatements: 1
     # Do not annotate functions which have this text in any comments associated
     # with or within the function.
-    noAnnotationComment: "nologcall:"
+    noAnnotationComment: "nologcall"
+    callGenerator:
+      type: cloudeng.io/go/cmd/goannotate/annotators/functions.LogCallWithContext
+      # contextType is the context type used by this API.
+      contextType: v.io/v23/context.T
+      # importPath is the import path for the logging call to be added.
+      importPath: v.io/x/ref/lib/apilog
+      # functionName is the name of the function to be inserted.
+      functionName: apilog.LogCallf
+
     # RmLogCall removes annotations previously added to log entry/exit
     # from a specified set of functions. The example here is appropriate for
     # vanadium.
@@ -41,7 +46,7 @@ annotations:
     interfaces:
       - "v.io/v23/namespace"
     functions:
-    logcall: apilog.LogCallf
+    functionNameRE: apilog.LogCallf
     comment: "gologcop: DO NOT EDIT, MUST BE FIRST STATEMENT"
     deferred: true
     # EnsureCopyrightAndLicense ensures that the specified copyright and license
