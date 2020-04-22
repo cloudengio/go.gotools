@@ -12,6 +12,7 @@ import (
 	"go/types"
 	"regexp"
 
+	"cloudeng.io/go/cmd/goannotate/annotators/internal"
 	"cloudeng.io/go/locate"
 	"cloudeng.io/go/locate/locateutil"
 	"cloudeng.io/text/edit"
@@ -21,15 +22,12 @@ import (
 
 // RmLogCall represents an annotor for removing logging calls.
 type RmLogCall struct {
-	Type        string   `annotator:"name of annotator type."`
-	Name        string   `annotator:"name of annotation."`
-	Packages    []string `annotator:"packages to be annotated"`
-	Interfaces  []string `annotator:"list of interfaces whose implementations are to have logging function calls removed from."`
-	Functions   []string `annotator:"list of functionms that are to have function calls removed from."`
-	Logcall     string   `annotator:"the logging function call to be removed"`
-	Comment     string   `annotator:"optional comment that must appear in the comments associated with the function call if it is to be removed."`
-	Deferred    bool     `annotator:"if set requires that the function to be removed must be defered."`
-	Concurrency int      `annotator:"the number of goroutines to use, zero for a sensible default."`
+	EssentialOptions `yaml:",inline"`
+	LocateOptions    `yaml:",inline"`
+
+	FunctionNameRE string `yaml:"functionNameRE" annotator:"the function call (regexp) to be removed"`
+	Comment        string `yaml:"comment" annotator:"optional comment that must appear in the comments associated with the function call if it is to be removed."`
+	Deferred       bool   `yaml:"deferred" annotator:"if set requires that the function to be removed must be defered."`
 }
 
 func init() {
@@ -38,7 +36,9 @@ func init() {
 
 // New implements annotators.Annotator.
 func (rc *RmLogCall) New(name string) Annotation {
-	return &RmLogCall{Name: name}
+	n := &RmLogCall{}
+	n.Name = name
+	return n
 }
 
 // UnmarshalYAML implements annotators.Annotation.
@@ -48,12 +48,12 @@ func (rc *RmLogCall) UnmarshalYAML(buf []byte) error {
 
 // Describe implements annotators.Annotation.
 func (rc *RmLogCall) Describe() string {
-	return MustDescribe(rc, "an annotator that removes instances of calls to functions.")
+	return internal.MustDescribe(rc, "an annotator that removes instances of calls to functions.")
 }
 
 // Do implements annotators.Annotation.
 func (rc *RmLogCall) Do(ctx context.Context, root string, pkgs []string) error {
-	logcallRE, err := regexp.Compile(rc.Logcall)
+	logcallRE, err := regexp.Compile(rc.FunctionNameRE)
 	if err != nil {
 		return err
 	}

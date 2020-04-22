@@ -8,12 +8,14 @@ import cloudeng.io/go/cmd/goannotate/annotators
 
 ## Constants
 
-### TagName
+### AddLogCallDescription
 ```go
-TagName = "annotator"
+AddLogCallDescription = `
+AddLogCall is an annotator to add function calls that are intended to log entry and exit from functions. The calls will be added as the first statement in the specified function.
+`
 
 ```
-TagName is the struct tag used to document annotator configuration fields.
+AddLogCallDescription documents AddLogCall.
 
 
 
@@ -34,24 +36,11 @@ func Available() []string
 ```
 Available lists all available annotations.
 
-### Func Describe
-```go
-func Describe(t interface{}, msg string) (string, error)
-```
-Describe generates a description for the supplied type based on its struct
-tags.
-
 ### Func Description
 ```go
 func Description(name string) string
 ```
 Description returns the description for the annotator or annotation.
-
-### Func MustDescribe
-```go
-func MustDescribe(t interface{}, msg string) string
-```
-MustDescribe is like describe except that panics on an error.
 
 ### Func Register
 ```go
@@ -78,25 +67,12 @@ is true.
 ### Type AddLogCall
 ```go
 type AddLogCall struct {
-	Type                string   `annotator:"name of annotator type."`
-	Name                string   `annotator:"name of annotation."`
-	Packages            []string `annotator:"packages to be annotated"`
-	Interfaces          []string `annotator:"list of interfaces whose implementations are to have logging calls added to them."`
-	Functions           []string `annotator:"list of functionms that are to have function calls added to them."`
-	ContextType         string   `yaml:"contextType" annotator:"type for the context parameter and result."`
-	Import              string   `annotator:"import patrh for the logging function."`
-	Logcall             string   `annotator:"invocation for the logging function."`
-	AtLeastStatements   int      `yaml:"atLeastStatements" annotator:"the number of statements that must be present in a function in order for it to be annotated."`
-	NoAnnotationComment string   `yaml:"noAnnotationComment" annotator:"do not annotate functions that contain this comment"`
-	Concurrency         int      `annotator:"the number of goroutines to use, zero for a sensible default."`
+	EssentialOptions
+	LocateOptions
 
-	// Used for templates.
-	FunctionName string `yaml:",omitempty"`
-	Tag          string `yaml:",omitempty"`
-	ContextParam string `yaml:",omitempty"`
-	Location     string `yaml:",omitempty"`
-	Params       string `yaml:",omitempty"`
-	Results      string `yaml:",omitempty"`
+	AtLeastStatements   int            `yaml:"atLeastStatements" annotator:"the number of statements that must be present in a function in order for it to be annotated."`
+	NoAnnotationComment string         `yaml:"noAnnotationComment" annotator:"do not annotate functions that contain this comment"`
+	CallGenerator       functions.Spec `yaml:"callGenerator" annotator:"the spec for the function call to be generated"`
 }
 ```
 AddLogCall represents an annotator for adding a function call that logs the
@@ -113,6 +89,7 @@ type Annotation interface {
 	// Packages is the set of packages to be annotated as requested on the
 	// command line and which overrides any configured ones.
 	Do(ctx context.Context, root string, packages []string) error
+	// Describe returns a description for the annotation.
 	Describe() string
 }
 ```
@@ -132,29 +109,46 @@ Annotator represents the interface that all annotators must implement.
 ### Type EnsureCopyrightAndLicense
 ```go
 type EnsureCopyrightAndLicense struct {
-	Type        string   `annotator:"name of annotator type."`
-	Name        string   `annotator:"name of annotation."`
-	Packages    []string `annotator:"packages to be annotated"`
-	Copyright   string   `annotator:"desired copyright notice."`
-	License     string   `annotator:"desired license notice."`
-	Concurrency int      `annotator:"the number of goroutines to use, zero for a sensible default."`
+	EssentialOptions
+
+	Copyright string `yaml:"copyright" annotator:"desired copyright notice."`
+	License   string `yaml:"license" annotator:"desired license notice."`
 }
 ```
 EnsureCopyrightAndLicense represents an annotator that can insert or replace
 copyright and license headers from go source code files.
 
+### Type EssentialOptions
+```go
+type EssentialOptions struct {
+	Type        string   `yaml:"type" annotator:"name of annotator type."`
+	Name        string   `yaml:"name" annotator:"name of annotation."`
+	Packages    []string `yaml:"packages" annotator:"packages to be annotated"`
+	Concurrency int      `yaml:"concurrency" annotator:"the number of goroutines to use, zero for a sensible default."`
+}
+```
+EssentialOptions represents the configuration options required for all
+annotations.
+
+### Type LocateOptions
+```go
+type LocateOptions struct {
+	Interfaces []string `yaml:"interfaces" annotator:"list of interfaces whose implementations are to have logging calls added to them."`
+	Functions  []string `yaml:"functions" annotator:"list of functions that are to have function calls added to them."`
+}
+```
+LocateOptions represents the configuration options used to locate specific
+interfaces and/or functions.
+
 ### Type RmLogCall
 ```go
 type RmLogCall struct {
-	Type        string   `annotator:"name of annotator type."`
-	Name        string   `annotator:"name of annotation."`
-	Packages    []string `annotator:"packages to be annotated"`
-	Interfaces  []string `annotator:"list of interfaces whose implementations are to have logging function calls removed from."`
-	Functions   []string `annotator:"list of functionms that are to have function calls removed from."`
-	Logcall     string   `annotator:"the logging function call to be removed"`
-	Comment     string   `annotator:"optional comment that must appear in the comments associated with the function call if it is to be removed."`
-	Deferred    bool     `annotator:"if set requires that the function to be removed must be defered."`
-	Concurrency int      `annotator:"the number of goroutines to use, zero for a sensible default."`
+	EssentialOptions
+	LocateOptions
+
+	FunctionNameRE string `yaml:"functionNameRE" annotator:"the function call (regexp) to be removed"`
+	Comment        string `yaml:"comment" annotator:"optional comment that must appear in the comments associated with the function call if it is to be removed."`
+	Deferred       bool   `yaml:"deferred" annotator:"if set requires that the function to be removed must be defered."`
 }
 ```
 RmLogCall represents an annotor for removing logging calls.
@@ -163,8 +157,8 @@ RmLogCall represents an annotor for removing logging calls.
 ```go
 type Spec struct {
 	yaml.MapSlice
-	Name string // Name identifies a particular configuration of an annotator type.
-	Type string // Type identifies the annotation to be performed.
+	Name string `yaml:"name"` // Name identifies a particular configuration of an annotator type.
+	Type string `yaml:"type"` // Type identifies the annotation to be performed.
 }
 ```
 Spec represents the yaml configuration for an annotation. It has a common

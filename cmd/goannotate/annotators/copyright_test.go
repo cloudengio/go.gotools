@@ -1,14 +1,15 @@
 package annotators_test
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 
 	"cloudeng.io/go/cmd/goannotate/annotators"
-	"golang.org/x/net/context"
+	"cloudeng.io/go/cmd/goannotate/annotators/internal/testutil"
 )
 
-var expectedPersonalApache = []diffReport{
+var expectedPersonalApache = []testutil.DiffReport{
 	{"cloudeng.go",
 		`1c1
 < // Copyright 2020 cloudeng llc. All rights reserved.
@@ -32,13 +33,13 @@ var expectedPersonalApache = []diffReport{
 
 func TestCopyright(t *testing.T) {
 	ctx := context.Background()
-	tmpdir, cleanup := setup(t)
+	tmpdir, cleanup := testutil.SetupAnnotators(t)
 	defer cleanup()
 	err := annotators.Lookup("personal-apache").Do(ctx, tmpdir, []string{here + "copyright"})
 	if err != nil {
 		t.Errorf("Do: %v", err)
 	}
 	original, copies := list(t, filepath.Join("testdata", "copyright")), list(t, tmpdir)
-	diffs := diffAll(t, original, copies)
-	compare(t, diffs, expectedPersonalApache)
+	diffs := testutil.DiffMultipleFiles(t, original, copies)
+	testutil.CompareDiffReports(t, diffs, expectedPersonalApache)
 }

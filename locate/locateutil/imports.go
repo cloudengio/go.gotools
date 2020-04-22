@@ -24,3 +24,15 @@ func ImportBlock(file *ast.File) (start, end token.Pos) {
 	}
 	return
 }
+
+// IsImportedByFile returns true if the supplied path appears in the Imports
+// section of an ast.File.
+func IsImportedByFile(file *ast.File, path string) bool {
+	path = `"` + path + `"`
+	for _, im := range file.Imports {
+		if im.Path.Value == path {
+			return true
+		}
+	}
+	return false
+}

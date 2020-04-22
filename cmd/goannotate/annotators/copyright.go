@@ -10,6 +10,7 @@ import (
 	"go/ast"
 	"strings"
 
+	"cloudeng.io/go/cmd/goannotate/annotators/internal"
 	"cloudeng.io/go/locate"
 	"cloudeng.io/text/edit"
 	"golang.org/x/tools/go/packages"
@@ -19,12 +20,10 @@ import (
 // EnsureCopyrightAndLicense represents an annotator that can insert or replace
 // copyright and license headers from go source code files.
 type EnsureCopyrightAndLicense struct {
-	Type        string   `annotator:"name of annotator type."`
-	Name        string   `annotator:"name of annotation."`
-	Packages    []string `annotator:"packages to be annotated"`
-	Copyright   string   `annotator:"desired copyright notice."`
-	License     string   `annotator:"desired license notice."`
-	Concurrency int      `annotator:"the number of goroutines to use, zero for a sensible default."`
+	EssentialOptions `yaml:",inline"`
+
+	Copyright string `yaml:"copyright" annotator:"desired copyright notice."`
+	License   string `yaml:"license" annotator:"desired license notice."`
 }
 
 func init() {
@@ -33,7 +32,9 @@ func init() {
 
 // New implements annotators.Annotators.
 func (ec *EnsureCopyrightAndLicense) New(name string) Annotation {
-	return &EnsureCopyrightAndLicense{Name: name}
+	n := &EnsureCopyrightAndLicense{}
+	n.Name = name
+	return n
 }
 
 // UnmarshalYAML implements annotators.Annotations.
@@ -43,7 +44,7 @@ func (ec *EnsureCopyrightAndLicense) UnmarshalYAML(buf []byte) error {
 
 // Describe implements annotators.Annotations.
 func (ec *EnsureCopyrightAndLicense) Describe() string {
-	return MustDescribe(ec,
+	return internal.MustDescribe(ec,
 		`an annotator that ensures that a copyright and license notice is 
 present at the top of all files. It will not remove existing notices.`,
 	)
@@ -58,6 +59,7 @@ func (ec *EnsureCopyrightAndLicense) Do(ctx context.Context, root string, pkgs [
 		concurrencyOpt(ec.Concurrency),
 		locate.Trace(Verbosef),
 		locate.IgnoreMissingFuctionsEtc(),
+		locate.IncludeTests(),
 	)
 	locator.AddPackages(pkgs...)
 	Verbosef("locating functions to have a copyright/license annotation...")

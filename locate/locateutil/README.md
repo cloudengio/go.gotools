@@ -25,7 +25,7 @@ CommentGroupsContain returns if any of the supplied CommentGroups contain
 
 ### Func FunctionCalls
 ```go
-func FunctionCalls(decl *ast.FuncDecl, callname string, deferred bool) []ast.Node
+func FunctionCalls(decl *ast.FuncDecl, callname *regexp.Regexp, deferred bool) []ast.Node
 ```
 FunctionCalls determines if the supplied function declaration contains a
 call 'callname' where callname is either a function name or a selector (eg.
@@ -63,6 +63,13 @@ interface or nil otherwise.
 func IsAbstract(fn *types.Func) bool
 ```
 IsAbstract returns true if the function declaration is abstract.
+
+### Func IsImportedByFile
+```go
+func IsImportedByFile(file *ast.File, path string) bool
+```
+IsImportedByFile returns true if the supplied path appears in the Imports
+section of an ast.File.
 
 ### Func IsInterfaceDefinition
 ```go

@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 
+	"cloudeng.io/cmdutil/flags"
+	"cloudeng.io/go/cmd/goannotate/annotators/internal"
 	"gopkg.in/yaml.v2"
 )
 
@@ -20,6 +22,22 @@ var (
 	annotators     = map[string]Annotator{}
 	configurations = map[string]Annotation{}
 )
+
+// EssentialOptions represents the configuration options required for all
+// annotations.
+type EssentialOptions struct {
+	Type        string   `yaml:"type" annotator:"name of annotator type."`
+	Name        string   `yaml:"name" annotator:"name of annotation."`
+	Packages    []string `yaml:"packages" annotator:"packages to be annotated"`
+	Concurrency int      `yaml:"concurrency" annotator:"the number of goroutines to use, zero for a sensible default."`
+}
+
+// LocateOptions represents the configuration options used to locate specific
+// interfaces and/or functions.
+type LocateOptions struct {
+	Interfaces []string `yaml:"interfaces" annotator:"list of interfaces whose implementations are to be annoated."`
+	Functions  []string `yaml:"functions" annotator:"list of functions that are to be annotated."`
+}
 
 // Verbosef is like fmt.Printf but will produce output if the Verbose
 // variable is true.
@@ -50,6 +68,7 @@ type Annotation interface {
 	// Packages is the set of packages to be annotated as requested on the
 	// command line and which overrides any configured ones.
 	Do(ctx context.Context, root string, packages []string) error
+	// Describe returns a description for the annotation.
 	Describe() string
 }
 
@@ -102,47 +121,25 @@ func Lookup(name string) Annotation {
 // delegated to the Unmarshal method of the annotator specuifed by the Type field.
 type Spec struct {
 	yaml.MapSlice
-	Name string // Name identifies a particular configuration of an annotator type.
-	Type string // Type identifies the annotation to be performed.
+	Name string `yaml:"name"` // Name identifies a particular configuration of an annotator type.
+	Type string `yaml:"type"` // Type identifies the annotation to be performed.
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (s *Spec) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&s.MapSlice); err != nil {
+	if err := internal.DelegatedYAML(s, unmarshal); err != nil {
 		return err
 	}
-	isKey := func(v yaml.MapItem, k string) (string, bool) {
-		if n, ok := v.Key.(string); ok && n == k {
-			tmp, ok := v.Value.(string)
-			return tmp, ok
-		}
-		return "", false
-	}
-	for _, v := range s.MapSlice {
-		if tmp, ok := isKey(v, "type"); ok {
-			s.Type = tmp
-		}
-		if tmp, ok := isKey(v, "name"); ok {
-			s.Name = tmp
-		}
-	}
-	if len(s.Type) == 0 {
-		return fmt.Errorf("failed to find 'Type' field in %s", s.MapSlice)
+	if !flags.AllSet(s.Type, s.Name) {
+		return fmt.Errorf("one of Type or Name not set")
 	}
 	annotator := annotators[s.Type]
 	if annotator == nil {
-		return fmt.Errorf("failed to find an implementation for %s", s.Type)
+		return fmt.Errorf("failed to find an annotator for %s", s.Type)
 	}
 	annotation := annotator.New(s.Name)
-	buf, err := yaml.Marshal(s.MapSlice)
-	if err != nil {
-		return fmt.Errorf("failed to marshal mapslice for %s", s.Type)
-	}
-	if err := annotation.UnmarshalYAML(buf); err != nil {
+	if err := internal.RemarshalYAML(s.MapSlice, annotation.UnmarshalYAML); err != nil {
 		return err
-	}
-	if _, ok := configurations[s.Name]; ok {
-		return fmt.Errorf("annotator configuration %v already exists", s.Name)
 	}
 	configurations[s.Name] = annotation
 	return nil

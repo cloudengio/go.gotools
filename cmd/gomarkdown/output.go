@@ -14,8 +14,11 @@ import (
 	"go/token"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 	"text/template"
+	"unicode"
+	"unicode/utf8"
 
 	"golang.org/x/tools/go/packages"
 )
@@ -24,18 +27,25 @@ import (
 // a colon is deemed to be a heading.
 func guessHeadings(level, words int, text string) string {
 	out := strings.Builder{}
-	heading := strings.Repeat("#", level) + " "
 	sc := bufio.NewScanner(bytes.NewBufferString(text))
+	heading := strings.Repeat("#", level) + " "
 	for sc.Scan() {
-		fields := strings.Fields(sc.Text())
+		line := sc.Text()
+		if len(line) == 0 {
+			out.WriteString("\n")
+			continue
+		}
+		first, _ := utf8.DecodeRuneInString(line)
+		fields := strings.Fields(line)
 		l := len(fields)
-		if l > 0 && l < words && strings.HasSuffix(fields[l-1], ":") {
+		if unicode.IsUpper(first) && l > 0 && l < words && strings.HasSuffix(fields[l-1], ":") {
 			out.WriteString(heading)
 			fields[l-1] = strings.TrimSuffix(fields[l-1], ":")
 			out.WriteString(strings.Join(fields, " "))
-		} else {
-			out.WriteString(sc.Text())
+			out.WriteString("\n")
+			continue
 		}
+		out.WriteString(line)
 		out.WriteString("\n")
 	}
 	return out.String()
@@ -44,8 +54,12 @@ func guessHeadings(level, words int, text string) string {
 func highlight(word, text string) string {
 	out := strings.Builder{}
 	sc := bufio.NewScanner(bytes.NewBufferString(text))
+	pre := regexp.MustCompile(`(\s+)` + word)
+	post := regexp.MustCompile(word + `(\s+)`)
+	quoted := "`" + word + "`"
 	for sc.Scan() {
-		line := strings.ReplaceAll(sc.Text(), word, "`"+word+"`")
+		line := pre.ReplaceAllString(sc.Text(), "$1"+quoted)
+		line = post.ReplaceAllString(line, quoted+"$1")
 		out.WriteString(line)
 		out.WriteString("\n")
 	}

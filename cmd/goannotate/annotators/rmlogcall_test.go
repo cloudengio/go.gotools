@@ -6,9 +6,10 @@ import (
 	"testing"
 
 	"cloudeng.io/go/cmd/goannotate/annotators"
+	"cloudeng.io/go/cmd/goannotate/annotators/internal/testutil"
 )
 
-var expectedRmLegacycall = []diffReport{
+var expectedRmLegacycall = []testutil.DiffReport{
 	{"legacy.go", `8d7
 < 	defer apilog.LogCallfLegacy(nil, "buf=%v...", buf)(nil, "") // gologcop: DO NOT EDIT, MUST BE FIRST STATEMENT
 13d11
@@ -16,7 +17,7 @@ var expectedRmLegacycall = []diffReport{
 `},
 }
 
-var expectedRmNoDeferLegacycall = []diffReport{
+var expectedRmNoDeferLegacycall = []testutil.DiffReport{
 	{"legacy.go", `18d17
 < 	apilog.LogCallfLegacy(nil, "n=%v...", n)(nil, "") // gologcop: DO NOT EDIT, MUST BE FIRST STATEMENT
 `},
@@ -24,7 +25,7 @@ var expectedRmNoDeferLegacycall = []diffReport{
 
 func TestRmLogCall(t *testing.T) {
 	ctx := context.Background()
-	tmpdir, cleanup := setup(t)
+	tmpdir, cleanup := testutil.SetupAnnotators(t)
 	defer cleanup()
 	err := annotators.Lookup("rmlegacy").Do(ctx, tmpdir, []string{here + "impl"})
 	if err != nil {
@@ -32,16 +33,16 @@ func TestRmLogCall(t *testing.T) {
 	}
 	original := []string{filepath.Join("testdata", "impl", "legacy.go")}
 	copies := list(t, tmpdir)
-	diffs := diffAll(t, original, copies)
-	compare(t, diffs, expectedRmLegacycall)
+	diffs := testutil.DiffMultipleFiles(t, original, copies)
+	testutil.CompareDiffReports(t, diffs, expectedRmLegacycall)
 
-	tmpdir, cleanup = setup(t)
+	tmpdir, cleanup = testutil.SetupAnnotators(t)
 	defer cleanup()
 	err = annotators.Lookup("rmlegacy-nodefer").Do(ctx, tmpdir, []string{here + "impl"})
 	if err != nil {
 		t.Errorf("Do: %v", err)
 	}
 	copies = list(t, tmpdir)
-	diffs = diffAll(t, original, copies)
-	compare(t, diffs, expectedRmNoDeferLegacycall)
+	diffs = testutil.DiffMultipleFiles(t, original, copies)
+	testutil.CompareDiffReports(t, diffs, expectedRmNoDeferLegacycall)
 }

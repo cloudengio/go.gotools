@@ -9,6 +9,16 @@ Package locate provides a means for obtaining the location of comments,
 functions and implementations of interfaces in go source code, with a view
 to annotating that source code programmatically.
 
+## Functions
+### Func IsGoListPath
+```go
+func IsGoListPath(path string) bool
+```
+IsGoListPath returns true if path will be passed to 'go list' to be resolved
+rather than being treated as a <package>.<regex> spec.
+
+
+
 ## Types
 ### Type HitMask
 ```go
