@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"cloudeng.io/go/cmd/goannotate/annotators"
 )
 
 const usage = `goannotate provides a configurable and extensible set of annotators
@@ -19,7 +21,9 @@ func init() {
 	flag.Usage = func() {
 		out := flag.CommandLine.Output()
 		fmt.Fprintf(out, "Usage of %s:\n", filepath.Base(os.Args[0]))
-		fmt.Fprintf(out, "%s\nCommand line flags:\n", usage)
+		fmt.Fprintf(out, "\n%s\nCommand line flags:\n", usage)
 		flag.PrintDefaults()
+		fmt.Fprintf(out, "\nAvailable annotators:\n\n")
+		fmt.Fprintf(out, "%s\n", describe(annotators.Registered()))
 	}
 }

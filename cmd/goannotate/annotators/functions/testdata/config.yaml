@@ -1,0 +1,9 @@
+generators:
+  - type: cloudeng.io/go/cmd/goannotate/annotators/functions.LogCallWithContext
+    contextType: context.Context
+    importPath: cloudeng.io/go/cmd/goannotate/annotators/testdata/apilog 
+    functionName: apilog.LogCallf
+  - type: cloudeng.io/go/cmd/goannotate/annotators/functions.SimpleLogCall
+    contextType: context.Context
+    importPath: log
+    functionName: log.Logf
