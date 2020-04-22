@@ -1,3 +1,7 @@
+// Copyright 2020 cloudeng llc. All rights reserved.
+// Use of this source code is governed by the Apache-2.0
+// license that can be found in the LICENSE file.
+
 package functions_test
 
 import (
@@ -15,12 +19,10 @@ import (
 
 func execute(t *testing.T, typeName string) (string, []string) {
 	const here = "cloudeng.io/go/cmd/goannotate/annotators/functions"
-
 	ctx := context.Background()
 	testutil.SetupFunctions(t)
-	locator := testutil.LocatePackages(t, ctx, here+"/testdata/sample")
+	locator := testutil.LocatePackages(ctx, t, here+"/testdata/sample")
 	generator := functions.Lookup(here + typeName)
-
 	var calls []string
 	errs := &errors.M{}
 	locator.WalkFunctions(func(fullname string, pkg *packages.Package, file *ast.File, fn *types.Func, decl *ast.FuncDecl, implements []string) {

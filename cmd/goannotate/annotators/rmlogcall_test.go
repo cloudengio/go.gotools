@@ -1,3 +1,7 @@
+// Copyright 2020 cloudeng llc. All rights reserved.
+// Use of this source code is governed by the Apache-2.0
+// license that can be found in the LICENSE file.
+
 package annotators_test
 
 import (
@@ -10,7 +14,7 @@ import (
 )
 
 var expectedRmLegacycall = []testutil.DiffReport{
-	{"legacy.go", `8d7
+	{Name: "legacy.go", Diff: `8d7
 < 	defer apilog.LogCallfLegacy(nil, "buf=%v...", buf)(nil, "") // gologcop: DO NOT EDIT, MUST BE FIRST STATEMENT
 13d11
 < 	defer apilog.LogCallfLegacy(nil, "n=%v...", n)(nil, "") // gologcop: DO NOT EDIT, MUST BE FIRST STATEMENT
@@ -18,7 +22,7 @@ var expectedRmLegacycall = []testutil.DiffReport{
 }
 
 var expectedRmNoDeferLegacycall = []testutil.DiffReport{
-	{"legacy.go", `18d17
+	{Name: "legacy.go", Diff: `18d17
 < 	apilog.LogCallfLegacy(nil, "n=%v...", n)(nil, "") // gologcop: DO NOT EDIT, MUST BE FIRST STATEMENT
 `},
 }

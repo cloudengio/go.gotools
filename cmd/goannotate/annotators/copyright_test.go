@@ -1,3 +1,7 @@
+// Copyright 2020 cloudeng llc. All rights reserved.
+// Use of this source code is governed by the Apache-2.0
+// license that can be found in the LICENSE file.
+
 package annotators_test
 
 import (
@@ -10,25 +14,24 @@ import (
 )
 
 var expectedPersonalApache = []testutil.DiffReport{
-	{"cloudeng.go",
-		`1c1
+	{Name: "cloudeng.go", Diff: `1c1
 < // Copyright 2020 cloudeng llc. All rights reserved.
 ---
 > // Copyright 2020 Cosmos Nicolaou. All rights reserved.
 `},
-	{"empty.go", `0a1,4
+	{Name: "empty.go", Diff: `0a1,4
 > // Copyright 2020 Cosmos Nicolaou. All rights reserved.
 > // Use of this source code is governed by the Apache-2.0
 > // license that can be found in the LICENSE file.
 > 
 `},
-	{"packagecomment.go", `0a1,4
+	{Name: "packagecomment.go", Diff: `0a1,4
 > // Copyright 2020 Cosmos Nicolaou. All rights reserved.
 > // Use of this source code is governed by the Apache-2.0
 > // license that can be found in the LICENSE file.
 > 
 `},
-	{"personal.go", ""},
+	{Name: "personal.go", Diff: ""},
 }
 
 func TestCopyright(t *testing.T) {

@@ -14,11 +14,11 @@ LogCallWithContextDescription = `
 LogCallWithContext provides a functon call generator for generating calls to
 functions with the following signature:
 
-  func (ctx <contextType>, functionName, callerLocation, format string, arguments ...interface{}) func(ctx <contextType>, format string, namedResults ...interface{}) 
+  func (ctx <contextType>, functionName, format string, arguments ...interface{}) func(ctx <contextType>, format string, namedResults ...interface{}) 
 
-invoked as follows:
+These are invoked via defer as show below:
 
-  defer <call>(ctx, "<function-name>", "<location>", "<format>", <parameters>....)(ctx, "<format>", <results>)
+  defer <call>(ctx, "<function-name>",  "<format>", <parameters>....)(ctx, "<format>", <results>)
 
 The actual type of the context is determined by the ContextType configuration
 field. The parameters and named results are captured and passed to the logging
@@ -29,6 +29,16 @@ results and log them on function exit.
 
 ```
 LogCallWithContextDescription documents LogCallWithContext.
+
+### SimpleLogCallDescription
+```go
+SimpleLogCallDescription = `
+SimpleLogCall provides a functon call generator for generating calls to
+functions with the same signature log.Callf and fmt.Printf.
+`
+
+```
+SimpleLogCallDescription documents SimpleLogCall.
 
 
 
@@ -80,9 +90,8 @@ function generators.
 ### Type LogCallWithContext
 ```go
 type LogCallWithContext struct {
-	EssentialOptions
-
-	ContextType string `yaml:"contextType" annotator:"type for the context parameter and result."`
+	EssentialOptions `yaml:",inline"`
+	ContextType      string `yaml:"contextType" annotator:"type for the context parameter and result."`
 }
 ```
 LogCallWithContext represents a function call generator for a logging call
@@ -91,6 +100,16 @@ with the following signature:
     func (ctx <contextType>, functionName, callerLocation, format string, arguments ...interface{}) func(ctx <contextType>, format string, namedResults ...interface{})
 
 See LogCallWithContextDescription for a complete description.
+
+### Type SimpleLogCall
+```go
+type SimpleLogCall struct {
+	EssentialOptions `yaml:",inline"`
+	ContextType      string `yaml:"contextType" annotator:"type for the context parameter and result."`
+}
+```
+SimpleLogCall represents a function call generator for a logging call with
+the same signature as log.Callf and fmt.Printf.
 
 ### Type Spec
 ```go

@@ -67,8 +67,8 @@ is true.
 ### Type AddLogCall
 ```go
 type AddLogCall struct {
-	EssentialOptions
-	LocateOptions
+	EssentialOptions `yaml:",inline"`
+	LocateOptions    `yaml:",inline"`
 
 	AtLeastStatements   int            `yaml:"atLeastStatements" annotator:"the number of statements that must be present in a function in order for it to be annotated."`
 	NoAnnotationComment string         `yaml:"noAnnotationComment" annotator:"do not annotate functions that contain this comment"`
@@ -109,7 +109,7 @@ Annotator represents the interface that all annotators must implement.
 ### Type EnsureCopyrightAndLicense
 ```go
 type EnsureCopyrightAndLicense struct {
-	EssentialOptions
+	EssentialOptions `yaml:",inline"`
 
 	Copyright string `yaml:"copyright" annotator:"desired copyright notice."`
 	License   string `yaml:"license" annotator:"desired license notice."`
@@ -133,8 +133,8 @@ annotations.
 ### Type LocateOptions
 ```go
 type LocateOptions struct {
-	Interfaces []string `yaml:"interfaces" annotator:"list of interfaces whose implementations are to have logging calls added to them."`
-	Functions  []string `yaml:"functions" annotator:"list of functions that are to have function calls added to them."`
+	Interfaces []string `yaml:"interfaces" annotator:"list of interfaces whose implementations are to be annoated."`
+	Functions  []string `yaml:"functions" annotator:"list of functions that are to be annotated."`
 }
 ```
 LocateOptions represents the configuration options used to locate specific
@@ -143,8 +143,8 @@ interfaces and/or functions.
 ### Type RmLogCall
 ```go
 type RmLogCall struct {
-	EssentialOptions
-	LocateOptions
+	EssentialOptions `yaml:",inline"`
+	LocateOptions    `yaml:",inline"`
 
 	FunctionNameRE string `yaml:"functionNameRE" annotator:"the function call (regexp) to be removed"`
 	Comment        string `yaml:"comment" annotator:"optional comment that must appear in the comments associated with the function call if it is to be removed."`

@@ -23,15 +23,21 @@ fields.
 ```go
 func DelegatedYAML(v interface{}, unmarshal func(interface{}) error) error
 ```
+DelegatedYAML will unmarshal the yaml configuration into a yaml.MapSlice and
+named fields. Given:
+
+    struct {
+      YAML.MapSlice
+      Type string `yaml:"type"`
+    }
+
+it will unmarshal the entire config into the MapSlice and if any of the
+fields in MapSlice have a key 'type', the value for that key will assigned
+to the Type field.
 
 ### Func Indent
 ```go
 func Indent(text string, indent int) string
-```
-
-### Func IsYAMLKey
-```go
-func IsYAMLKey(v yaml.MapItem, k string) (string, bool)
 ```
 
 ### Func MustDescribe
@@ -43,6 +49,8 @@ func MustDescribe(t interface{}, detail string) string
 ```go
 func RemarshalYAML(v yaml.MapSlice, unmarshal func(buf []byte) error) error
 ```
+RemarshalYAML will marshal the supplied yaml.MapSlice to a buf and then
+invoke the supplied unmarshal function.
 
 
 

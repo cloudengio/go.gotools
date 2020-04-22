@@ -1,4 +1,5 @@
 # [cloudeng.io/go/cmd/goannotate](https://pkg.go.dev/cloudeng.io/go/cmd/goannotate?tab=doc)
+[![CircleCI](https://circleci.com/gh/cloudengio/go.gotools.svg?style=svg)](https://circleci.com/gh/cloudengio/go.gotools) [![Go Report Card](https://goreportcard.com/badge/cloudeng.io/go/cmd/goannotate)](https://goreportcard.com/report/cloudeng.io/go/cmd/goannotate)
 
 
 # Usage of `goannotate`
@@ -46,11 +47,11 @@ function.
       LogCallWithContext provides a functon call generator for generating calls to
       functions with the following signature:
 
-        func (ctx <contextType>, functionName, callerLocation, format string, arguments ...interface{}) func(ctx <contextType>, format string, namedResults ...interface{})
+        func (ctx <contextType>, functionName, format string, arguments ...interface{}) func(ctx <contextType>, format string, namedResults ...interface{})
 
       These are invoked via defer as show below:
 
-        defer <call>(ctx, "<function-name>", "<location>", "<format>", <parameters>....)(ctx, "<format>", <results>)
+        defer <call>(ctx, "<function-name>",  "<format>", <parameters>....)(ctx, "<format>", <results>)
 
       The actual type of the context is determined by the ContextType configuration
       field. The parameters and named results are captured and passed to the logging

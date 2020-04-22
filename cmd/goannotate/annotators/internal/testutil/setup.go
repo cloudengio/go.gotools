@@ -1,3 +1,7 @@
+// Copyright 2020 cloudeng llc. All rights reserved.
+// Use of this source code is governed by the Apache-2.0
+// license that can be found in the LICENSE file.
+
 package testutil
 
 import (
@@ -36,11 +40,10 @@ func initConfig(t *testing.T, v interface{}) {
 		// make sure error is reported
 		t.Fatalf("error: %v", initErr)
 	}
-
 }
 
-// SetupAnnotators reads  ./testdata/config.yaml and initializes
-// the annototators package, creates a temp directory and a cleanup function
+// SetupAnnotators reads ./testdata/config.yaml and initializes the
+// annototators package, creates a temp directory and a cleanup function
 // to remove the test directory on test failures.
 func SetupAnnotators(t *testing.T) (string, func()) {
 	config := &struct {
@@ -62,6 +65,8 @@ func SetupAnnotators(t *testing.T) (string, func()) {
 	}
 }
 
+// SetupFunctions reads ./testdata/config.yaml and initializes
+// the annotators/functions package.
 func SetupFunctions(t *testing.T) {
 	config := &struct {
 		Generators []functions.Spec `yam:"generators"`
@@ -72,7 +77,9 @@ func SetupFunctions(t *testing.T) {
 	}
 }
 
-func LocatePackages(t *testing.T, ctx context.Context, pkgs ...string) *locate.T {
+// LocatePackages runs a locator.T with pkgs as the argument to
+// .AddFunctions and .AddPackages.
+func LocatePackages(ctx context.Context, t *testing.T, pkgs ...string) *locate.T {
 	locator := locate.New()
 	locator.AddFunctions(pkgs...)
 	locator.AddPackages(pkgs...)

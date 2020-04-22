@@ -1,8 +1,12 @@
+// Copyright 2020 cloudeng llc. All rights reserved.
+// Use of this source code is governed by the Apache-2.0
+// license that can be found in the LICENSE file.
+
 // Usage of goannotate:
-// 
+//
 // goannotate provides a configurable and extensible set of annotators
 // that can be used to add/remove statements from large bodies of go source code.
-// 
+//
 // Command line flags:
 //   -annotation string
 //     	annotation to be applied
@@ -16,9 +20,9 @@
 //     	display verbose debug info
 //   -write-dir string
 //     	if set, specify an alternate directory to write modified files to, otherwise files are modified in place.
-// 
+//
 // Available annotators:
-// 
+//
 // cloudeng.io/go/cmd/goannotate/annotators.AddLogCall:
 // AddLogCall is an annotator to add function calls that are intended to log entry and exit from functions. The calls will be added as the first statement in the specified function.
 //   type:                name of annotator type.
@@ -32,19 +36,19 @@
 //                        in order for it to be annotated.
 //   noAnnotationComment: do not annotate functions that contain this comment
 //   callGenerator:       the spec for the function call to be generated
-// 
+//
 //     Available Call Generators:
-// 
+//
 //     cloudeng.io/go/cmd/goannotate/annotators/functions.LogCallWithContext:
 //     LogCallWithContext provides a functon call generator for generating calls to
 //     functions with the following signature:
-//     
-//       func (ctx <contextType>, functionName, callerLocation, format string, arguments ...interface{}) func(ctx <contextType>, format string, namedResults ...interface{}) 
-//     
+//
+//       func (ctx <contextType>, functionName, format string, arguments ...interface{}) func(ctx <contextType>, format string, namedResults ...interface{})
+//
 //     These are invoked via defer as show below:
-//     
-//       defer <call>(ctx, "<function-name>", "<location>", "<format>", <parameters>....)(ctx, "<format>", <results>)
-//     
+//
+//       defer <call>(ctx, "<function-name>",  "<format>", <parameters>....)(ctx, "<format>", <results>)
+//
 //     The actual type of the context is determined by the ContextType configuration
 //     field. The parameters and named results are captured and passed to the logging
 //     call according to cloudeng.io/go/derive.ArgsForParams and ArgsForResults.
@@ -54,7 +58,7 @@
 //       importPath:   import path for the logging function.
 //       functionName: name of the function to be invoked.
 //       contextType:  type for the context parameter and result.
-// 
+//
 //     cloudeng.io/go/cmd/goannotate/annotators/functions.SimpleLogCall:
 //     SimpleLogCall provides a functon call generator for generating calls to
 //     functions with the same signature log.Callf and fmt.Printf.
@@ -62,10 +66,10 @@
 //       importPath:   import path for the logging function.
 //       functionName: name of the function to be invoked.
 //       contextType:  type for the context parameter and result.
-// 
-// 
+//
+//
 // cloudeng.io/go/cmd/goannotate/annotators.EnsureCopyrightAndLicense:
-// an annotator that ensures that a copyright and license notice is 
+// an annotator that ensures that a copyright and license notice is
 // present at the top of all files. It will not remove existing notices.
 //   type:        name of annotator type.
 //   name:        name of annotation.
@@ -73,7 +77,7 @@
 //   concurrency: the number of goroutines to use, zero for a sensible default.
 //   copyright:   desired copyright notice.
 //   license:     desired license notice.
-// 
+//
 // cloudeng.io/go/cmd/goannotate/annotators.RmLogCall:
 // an annotator that removes instances of calls to functions.
 //   type:           name of annotator type.
@@ -86,6 +90,6 @@
 //   comment:        optional comment that must appear in the comments associated
 //                   with the function call if it is to be removed.
 //   deferred:       if set requires that the function to be removed must be defered.
-// 
-// 
+//
+//
 package main
