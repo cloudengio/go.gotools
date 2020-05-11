@@ -290,7 +290,6 @@ import {{.ImportPath}}
 
 {{- if .Consts}}
 ## Constants
-
 {{range .Consts}}### {{join .Names ", "}}
 {{codeStart}}
 {{value .Decl}}
@@ -369,11 +368,18 @@ import {{.ImportPath}}
 
 {{- if .Examples}}
 ## Examples
-
 {{range .Examples}}### {{exampleLink . }}
 {{comment 0 4 .Doc}}
 {{end}}
 {{end}}
+
+{{- if .Notes}}
+{{range $marker, $notes := .Notes}}
+### {{$marker}}
+{{range $notes}}- {{.UID}}: {{.Body}}{{end}}
+{{end}}
+{{end}}
+
 `
 
 var markdownCommandTemplate = `# {{packageLink}}
