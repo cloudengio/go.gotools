@@ -76,6 +76,16 @@ type CallGenerator interface {
 CallGenerator represents the ability to generate code for a function call
 using arguments taken from a function call signature.
 
+### Functions
+
+```go
+func Lookup(typeName string) CallGenerator
+```
+Lookup returns the CallGenerator, if any, with the specified type.
+
+
+
+
 ### Type EssentialOptions
 ```go
 type EssentialOptions struct {
@@ -86,6 +96,7 @@ type EssentialOptions struct {
 ```
 EssentialOptions represents the configuration options required for all
 function generators.
+
 
 ### Type LogCallWithContext
 ```go
@@ -101,6 +112,33 @@ with the following signature:
 
 See LogCallWithContextDescription for a complete description.
 
+### Methods
+
+```go
+func (lc *LogCallWithContext) Describe() string
+```
+Describe implements functions.CallGenerator.
+
+
+```go
+func (lc *LogCallWithContext) Generate(fset *token.FileSet, fn *types.Func, decl *ast.FuncDecl) (string, error)
+```
+
+
+```go
+func (lc *LogCallWithContext) Import() string
+```
+Import implements functions.CallGenerator.
+
+
+```go
+func (lc *LogCallWithContext) UnmarshalYAML(buf []byte) error
+```
+UnmarshalYAML implements functions.CallGenerator.
+
+
+
+
 ### Type SimpleLogCall
 ```go
 type SimpleLogCall struct {
@@ -111,6 +149,33 @@ type SimpleLogCall struct {
 SimpleLogCall represents a function call generator for a logging call with
 the same signature as log.Callf and fmt.Printf.
 
+### Methods
+
+```go
+func (sl *SimpleLogCall) Describe() string
+```
+Describe implements functions.CallGenerator.
+
+
+```go
+func (sl *SimpleLogCall) Generate(fset *token.FileSet, fn *types.Func, decl *ast.FuncDecl) (string, error)
+```
+
+
+```go
+func (sl *SimpleLogCall) Import() string
+```
+Import implements functions.CallGenerator.
+
+
+```go
+func (sl *SimpleLogCall) UnmarshalYAML(buf []byte) error
+```
+UnmarshalYAML implements functions.CallGenerator.
+
+
+
+
 ### Type Spec
 ```go
 type Spec struct {
@@ -119,6 +184,16 @@ type Spec struct {
 }
 ```
 Spec represents the yaml configuration for a function call generator.
+
+### Methods
+
+```go
+func (s *Spec) UnmarshalYAML(unmarshal func(interface{}) error) error
+```
+UnmarshalYAML implements yaml.Unmarshaler.
+
+
+
 
 
 

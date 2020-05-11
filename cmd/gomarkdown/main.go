@@ -91,6 +91,7 @@ func main() {
 			errs.Append(fmt.Errorf("failed to create ast.Package for %v: %v", pkg.PkgPath, err))
 			return
 		}
+
 		// Merge all of the examples into the single package level Examples
 		// since the markdown will list all of the examples in one section.
 		examples := docPkg.Examples

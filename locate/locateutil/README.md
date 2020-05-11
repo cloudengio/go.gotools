@@ -96,5 +96,16 @@ type FuncDesc struct {
 FuncDesc represents a function definition, declaration and the file and
 position within that file. Decl will be nil if Abstract is true.
 
+### Functions
+
+```go
+func Functions(pkg *packages.Package, re *regexp.Regexp, noMethods bool) []FuncDesc
+```
+Functions returns the functions in the supplied package that match the
+regular expression. If noMethods is false then methods are also returned.
+
+
+
+
 
 
