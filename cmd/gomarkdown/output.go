@@ -326,6 +326,50 @@ import {{.ImportPath}}
 {{type .Decl}}
 {{codeEnd}}
 {{comment 0 4 .Doc}}
+
+{{- if .Consts}}
+### Constants
+{{range .Consts}}### {{join .Names ", "}}
+{{codeStart}}
+{{value .Decl}}
+{{codeEnd}}
+{{comment 0 4 .Doc}}
+{{end}}
+{{end}}
+{{- if .Vars}}
+### Variables
+{{range .Vars}}### {{join .Names ", "}}
+{{codeStart}}
+{{value .Decl}}
+{{codeEnd}}
+{{comment 0 4 .Doc}}
+{{end}}
+{{end}}
+{{- if .Funcs}}
+### Functions
+{{range .Funcs}}
+{{codeStart}}
+{{func .Decl}}
+{{codeEnd}}
+{{comment 0 4 .Doc}}
+{{end}}
+{{end}}
+{{- if .Methods}}
+### Methods
+{{range .Methods}}
+{{codeStart}}
+{{func .Decl}}
+{{codeEnd}}
+{{comment 0 4 .Doc}}
+{{end}}
+{{end}}
+{{- if .Examples}}
+### Examples
+{{range .Examples}}#### {{exampleLink . }}
+{{comment 0 4 .Doc}}
+{{end}}
+{{end}}
+
 {{end}}
 {{end}}
 

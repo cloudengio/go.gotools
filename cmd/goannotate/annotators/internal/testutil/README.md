@@ -50,5 +50,14 @@ type DiffReport struct {
 }
 ```
 
+### Functions
+
+```go
+func DiffMultipleFiles(t *testing.T, a, b []string) []DiffReport
+```
+
+
+
+
 
 

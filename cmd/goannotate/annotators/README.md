@@ -78,6 +78,34 @@ type AddLogCall struct {
 AddLogCall represents an annotator for adding a function call that logs the
 entry and exit to every function and method that is matched by the locator.
 
+### Methods
+
+```go
+func (lc *AddLogCall) Describe() string
+```
+Describe implements annotators.Annotation.
+
+
+```go
+func (lc *AddLogCall) Do(ctx context.Context, root string, pkgs []string) error
+```
+Do implements annotators.Annotation.
+
+
+```go
+func (lc *AddLogCall) New(name string) Annotation
+```
+New implements annotators.Annotator.
+
+
+```go
+func (lc *AddLogCall) UnmarshalYAML(buf []byte) error
+```
+UnmarshalYAML implements annotators.Annotation.
+
+
+
+
 ### Type Annotation
 ```go
 type Annotation interface {
@@ -95,6 +123,16 @@ type Annotation interface {
 ```
 Annotation represents a configured instance of an Annotator.
 
+### Functions
+
+```go
+func Lookup(name string) Annotation
+```
+Lookup returns the annotation with the specified typeName, if any.
+
+
+
+
 ### Type Annotator
 ```go
 type Annotator interface {
@@ -105,6 +143,7 @@ type Annotator interface {
 }
 ```
 Annotator represents the interface that all annotators must implement.
+
 
 ### Type EnsureCopyrightAndLicense
 ```go
@@ -120,6 +159,34 @@ type EnsureCopyrightAndLicense struct {
 EnsureCopyrightAndLicense represents an annotator that can insert or replace
 copyright and license headers from go source code files.
 
+### Methods
+
+```go
+func (ec *EnsureCopyrightAndLicense) Describe() string
+```
+Describe implements annotators.Annotations.
+
+
+```go
+func (ec *EnsureCopyrightAndLicense) Do(ctx context.Context, root string, pkgs []string) error
+```
+Do implements annotators.Annotations.
+
+
+```go
+func (ec *EnsureCopyrightAndLicense) New(name string) Annotation
+```
+New implements annotators.Annotators.
+
+
+```go
+func (ec *EnsureCopyrightAndLicense) UnmarshalYAML(buf []byte) error
+```
+UnmarshalYAML implements annotators.Annotations.
+
+
+
+
 ### Type EssentialOptions
 ```go
 type EssentialOptions struct {
@@ -132,6 +199,7 @@ type EssentialOptions struct {
 EssentialOptions represents the configuration options required for all
 annotations.
 
+
 ### Type LocateOptions
 ```go
 type LocateOptions struct {
@@ -141,6 +209,7 @@ type LocateOptions struct {
 ```
 LocateOptions represents the configuration options used to locate specific
 interfaces and/or functions.
+
 
 ### Type RmLogCall
 ```go
@@ -155,6 +224,34 @@ type RmLogCall struct {
 ```
 RmLogCall represents an annotor for removing logging calls.
 
+### Methods
+
+```go
+func (rc *RmLogCall) Describe() string
+```
+Describe implements annotators.Annotation.
+
+
+```go
+func (rc *RmLogCall) Do(ctx context.Context, root string, pkgs []string) error
+```
+Do implements annotators.Annotation.
+
+
+```go
+func (rc *RmLogCall) New(name string) Annotation
+```
+New implements annotators.Annotator.
+
+
+```go
+func (rc *RmLogCall) UnmarshalYAML(buf []byte) error
+```
+UnmarshalYAML implements annotators.Annotation.
+
+
+
+
 ### Type Spec
 ```go
 type Spec struct {
@@ -167,6 +264,16 @@ Spec represents the yaml configuration for an annotation. It has a common
 field for the type and name of the annotator but all other fields are
 delegated to the Unmarshal method of the annotator specuifed by the Type
 field.
+
+### Methods
+
+```go
+func (s *Spec) UnmarshalYAML(unmarshal func(interface{}) error) error
+```
+UnmarshalYAML implements yaml.Unmarshaler.
+
+
+
 
 
 

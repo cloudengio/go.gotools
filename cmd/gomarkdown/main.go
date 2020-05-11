@@ -100,6 +100,7 @@ func main() {
 		for _, tyeg := range docPkg.Types {
 			examples = append(examples, tyeg.Examples...)
 		}
+
 		docPkg.Examples = examples
 		st := newOutputState(docPkg, pkg,
 			markdownFlavour(markdownFlag),
