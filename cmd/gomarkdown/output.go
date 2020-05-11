@@ -363,6 +363,12 @@ import {{.ImportPath}}
 {{comment 0 4 .Doc}}
 {{end}}
 {{end}}
+{{- if .Examples}}
+### Examples
+{{range .Examples}}#### {{exampleLink . }}
+{{comment 0 4 .Doc}}
+{{end}}
+{{end}}
 
 {{end}}
 {{end}}
