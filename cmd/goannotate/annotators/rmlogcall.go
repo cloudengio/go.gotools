@@ -61,6 +61,7 @@ func (rc *RmLogCall) Do(ctx context.Context, root string, pkgs []string) error {
 		concurrencyOpt(rc.Concurrency),
 		locate.Trace(Verbosef),
 		locate.IgnoreMissingFuctionsEtc(),
+		locate.IncludeMethods(rc.IncludeMethods),
 	)
 	locator.AddInterfaces(rc.Interfaces...)
 	locator.AddFunctions(rc.Functions...)

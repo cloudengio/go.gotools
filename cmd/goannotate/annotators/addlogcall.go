@@ -29,7 +29,6 @@ type AddLogCall struct {
 	EssentialOptions `yaml:",inline"`
 	LocateOptions    `yaml:",inline"`
 
-	IncludeMethods      bool           `yaml:"includeMethods" annotator:"if set, methods as well as functions that match the function spec are annotated"`
 	AtLeastStatements   int            `yaml:"atLeastStatements" annotator:"the number of statements that must be present in a function in order for it to be annotated."`
 	NoAnnotationComment string         `yaml:"noAnnotationComment" annotator:"do not annotate functions that contain this comment"`
 	CallGenerator       functions.Spec `yaml:"callGenerator" annotator:"the spec for the function call to be generated"`

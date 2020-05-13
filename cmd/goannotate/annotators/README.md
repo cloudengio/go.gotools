@@ -69,7 +69,6 @@ type AddLogCall struct {
 	EssentialOptions `yaml:",inline"`
 	LocateOptions    `yaml:",inline"`
 
-	IncludeMethods      bool           `yaml:"includeMethods" annotator:"if set, methods as well as functions that match the function spec are annotated"`
 	AtLeastStatements   int            `yaml:"atLeastStatements" annotator:"the number of statements that must be present in a function in order for it to be annotated."`
 	NoAnnotationComment string         `yaml:"noAnnotationComment" annotator:"do not annotate functions that contain this comment"`
 	CallGenerator       functions.Spec `yaml:"callGenerator" annotator:"the spec for the function call to be generated"`
@@ -203,8 +202,9 @@ annotations.
 ### Type LocateOptions
 ```go
 type LocateOptions struct {
-	Interfaces []string `yaml:"interfaces" annotator:"list of interfaces whose implementations are to be annoated."`
-	Functions  []string `yaml:"functions" annotator:"list of functions that are to be annotated."`
+	Interfaces     []string `yaml:"interfaces" annotator:"list of interfaces whose implementations are to be annoated."`
+	Functions      []string `yaml:"functions" annotator:"list of functions that are to be annotated."`
+	IncludeMethods bool     `yaml:"includeMethods" annotator:"if set, methods as well as functions that match the function spec are annotated"`
 }
 ```
 LocateOptions represents the configuration options used to locate specific

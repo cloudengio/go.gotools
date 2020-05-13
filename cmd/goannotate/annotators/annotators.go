@@ -35,8 +35,9 @@ type EssentialOptions struct {
 // LocateOptions represents the configuration options used to locate specific
 // interfaces and/or functions.
 type LocateOptions struct {
-	Interfaces []string `yaml:"interfaces" annotator:"list of interfaces whose implementations are to be annoated."`
-	Functions  []string `yaml:"functions" annotator:"list of functions that are to be annotated."`
+	Interfaces     []string `yaml:"interfaces" annotator:"list of interfaces whose implementations are to be annoated."`
+	Functions      []string `yaml:"functions" annotator:"list of functions that are to be annotated."`
+	IncludeMethods bool     `yaml:"includeMethods" annotator:"if set, methods as well as functions that match the function spec are annotated"`
 }
 
 // Verbosef is like fmt.Printf but will produce output if the Verbose
