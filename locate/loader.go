@@ -54,6 +54,7 @@ func (ld *loader) loadPaths(paths []string, includeTests bool) error {
 	if err != nil {
 		return err
 	}
+
 	errs := &errors.M{}
 	for _, pkg := range pkgs {
 		if len(pkg.Name) == 0 {

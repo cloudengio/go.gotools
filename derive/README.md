@@ -10,7 +10,6 @@ Functions are provided for obtaining the text representations of existing go
 types and function signatures that can be used when generating annotations.
 
 ## Constants
-
 ### ContextType
 ```go
 ContextType = "context.Context"
@@ -73,6 +72,7 @@ func ParamAt(signature *types.Signature, pos int) (varName, typeName string, ok 
 ```
 ParamAt returns the name and type of the parameter at pos. It returns false
 if no such parameter exists.
+
 
 
 

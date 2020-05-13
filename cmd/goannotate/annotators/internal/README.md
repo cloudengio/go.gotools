@@ -7,7 +7,6 @@ import cloudeng.io/go/cmd/goannotate/annotators/internal
 
 
 ## Constants
-
 ### DocTagName
 ```go
 DocTagName = "annotator"
@@ -51,6 +50,7 @@ func RemarshalYAML(v yaml.MapSlice, unmarshal func(buf []byte) error) error
 ```
 RemarshalYAML will marshal the supplied yaml.MapSlice to a buf and then
 invoke the supplied unmarshal function.
+
 
 
 

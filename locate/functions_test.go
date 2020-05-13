@@ -56,6 +56,50 @@ func TestFunctions(t *testing.T) {
 
 	compareSlices(t, listPackages(locator),
 		[]string{"cloudeng.io/go/locate/testdata/data"})
+
+}
+
+func TestMethods(t *testing.T) {
+	ctx := context.Background()
+	locator := locate.New(locate.IncludeMethods(true))
+	locator.AddFunctions(here + "data.Fn1$")
+	if err := locator.Do(ctx); err != nil {
+		t.Fatalf("locator.Do: %v", err)
+	}
+	compareLocations(t, listFunctions(locator), []string{
+		"(*cloudeng.io/go/locate/testdata/data.rcv).Fn1",
+		here + "data.Fn1",
+	}, []string{
+		"data/functions.go:13:1",
+		"data/functions.go:7:1",
+	})
+}
+
+func TestMainPackage(t *testing.T) {
+	ctx := context.Background()
+	locator := locate.New()
+	locator.AddFunctions(here + "cmd")
+	if err := locator.Do(ctx); err != nil {
+		t.Fatalf("locator.Do: %v", err)
+	}
+	compareLocations(t, listFunctions(locator), []string{
+		here + "cmd.InMain",
+	}, []string{
+		"cmd/main.go:6:1",
+	})
+
+	locator = locate.New(locate.IncludeMethods(true))
+	locator.AddFunctions(here + "cmd.InMain")
+	if err := locator.Do(ctx); err != nil {
+		t.Fatalf("locator.Do: %v", err)
+	}
+	compareLocations(t, listFunctions(locator), []string{
+		"(*cloudeng.io/go/locate/testdata/cmd.rcvr).InMain",
+		here + "cmd.InMain",
+	}, []string{
+		"cmd/main.go:12:1",
+		"cmd/main.go:6:1",
+	})
 }
 
 func TestFunctionsAndInterfaces(t *testing.T) {

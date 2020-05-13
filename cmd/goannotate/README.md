@@ -36,6 +36,8 @@ function.
                          default.
     interfaces:          list of interfaces whose implementations are to be annoated.
     functions:           list of functions that are to be annotated.
+    includeMethods:      if set, methods as well as functions that match the function
+                         spec are annotated
     atLeastStatements:   the number of statements that must be present in a function
                          in order for it to be annotated.
     noAnnotationComment: do not annotate functions that contain this comment
