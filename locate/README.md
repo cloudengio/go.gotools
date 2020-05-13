@@ -72,6 +72,13 @@ exported matching interfaces and functions.
 
 
 ```go
+func IncludeMethods(val bool) Option
+```
+IncludeMethods controls if methods as well as functions are matched against
+the function spec.
+
+
+```go
 func IncludeTests() Option
 ```
 IncludeTests includes test code from all requested packages.
@@ -231,6 +238,7 @@ func (t *T) WalkPackages(fn func(pkg *packages.Package))
 ```
 WalkPackages calls the supplied function for each package loaded. The
 function is called in lexicographic order of package path.
+
 
 
 

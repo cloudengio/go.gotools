@@ -16,11 +16,18 @@ annotations:
     # from the command line.
     packages:
       - "v.io/x/ref/runtime/internal/naming/namespace"
-    # Interfaces lists the interfaces that define the API.
+    # Interfaces lists the interfaces that define the API. Interfaces are specified
+    # as <package>.<regex> with <pacakge> matching all of the interfaces in that
+    # package.
     interfaces:
       - "v.io/v23/namespace"
-    # Functions lists the functions that define the API.
+    # Functions lists the functions that define the API. Functions are specified
+    # as <package>.<regex> with <pacakge> matching all of the functions (or
+    # methods in that package).
     functions:
+    # IncludeMethods can be set to true to allow methods to be matched by
+    # the functions spec above.
+    includeMethods: false
     # Functions must have at least this number of top-level statements to
     # be worth annotating.
     atLeastStatements: 1
@@ -46,6 +53,7 @@ annotations:
     interfaces:
       - "v.io/v23/namespace"
     functions:
+    includeMethods: false
     functionNameRE: apilog.LogCallf
     comment: "gologcop: DO NOT EDIT, MUST BE FIRST STATEMENT"
     deferred: true

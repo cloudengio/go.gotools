@@ -85,6 +85,7 @@ type options struct {
 	concurrency               int
 	tests                     bool
 	ignoreMissingFunctionsEtc bool
+	includeMethods            bool
 	trace                     func(string, ...interface{})
 }
 
@@ -118,6 +119,14 @@ func IgnoreMissingFuctionsEtc() Option {
 func IncludeTests() Option {
 	return func(o *options) {
 		o.tests = true
+	}
+}
+
+// IncludeMethods controls if methods as well as functions are matched against
+// the function spec.
+func IncludeMethods(val bool) Option {
+	return func(o *options) {
+		o.includeMethods = val
 	}
 }
 

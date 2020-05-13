@@ -82,6 +82,7 @@ func (lc *AddLogCall) Do(ctx context.Context, root string, pkgs []string) error 
 		concurrencyOpt(lc.Concurrency),
 		locate.Trace(Verbosef),
 		locate.IgnoreMissingFuctionsEtc(),
+		locate.IncludeMethods(lc.IncludeMethods),
 	)
 	locator.AddInterfaces(lc.Interfaces...)
 	locator.AddFunctions(lc.Functions...)

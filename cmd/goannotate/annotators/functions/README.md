@@ -7,7 +7,6 @@ import cloudeng.io/go/cmd/goannotate/annotators/functions
 
 
 ## Constants
-
 ### LogCallWithContextDescription
 ```go
 LogCallWithContextDescription = `
@@ -191,6 +190,7 @@ Spec represents the yaml configuration for a function call generator.
 func (s *Spec) UnmarshalYAML(unmarshal func(interface{}) error) error
 ```
 UnmarshalYAML implements yaml.Unmarshaler.
+
 
 
 

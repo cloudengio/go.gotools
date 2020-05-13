@@ -32,6 +32,8 @@
 //                        default.
 //   interfaces:          list of interfaces whose implementations are to be annoated.
 //   functions:           list of functions that are to be annotated.
+//   includeMethods:      if set, methods as well as functions that match the function
+//                        spec are annotated
 //   atLeastStatements:   the number of statements that must be present in a function
 //                        in order for it to be annotated.
 //   noAnnotationComment: do not annotate functions that contain this comment
@@ -91,6 +93,8 @@
 //   concurrency:    the number of goroutines to use, zero for a sensible default.
 //   interfaces:     list of interfaces whose implementations are to be annoated.
 //   functions:      list of functions that are to be annotated.
+//   includeMethods: if set, methods as well as functions that match the function
+//                   spec are annotated
 //   functionNameRE: the function call (regexp) to be removed
 //   comment:        optional comment that must appear in the comments associated
 //                   with the function call if it is to be removed.

@@ -37,7 +37,7 @@ func (t *T) findFunctionsInPackage(ctx context.Context, pkgPath string, fnRE *re
 	if pkg == nil {
 		return fmt.Errorf("locating functions: failed to lookup: %v", pkgPath)
 	}
-	funcs := locateutil.Functions(pkg, fnRE, true)
+	funcs := locateutil.Functions(pkg, fnRE, !t.options.includeMethods)
 	for _, fd := range funcs {
 		t.addFunction(fd, pkgPath, "")
 	}
