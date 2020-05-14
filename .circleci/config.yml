@@ -7,6 +7,11 @@ jobs:
       - checkout
       - go/load-cache
       - go/mod-download
+      - run:
+          name: goimports
+          command: |
+            go get golang.org/x/tools/cmd/goimports
+            go install -x golang.org/x/tools/cmd/goimports
       - go/save-cache
       - go/test:
           covermode: atomic
