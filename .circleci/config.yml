@@ -1,16 +1,45 @@
-version: 2
 jobs:
-  build:
-    docker:
-      - image: circleci/golang:1.14
+  test:
+    executor:
+      name: go/default
+      tag: "1.14"
     steps:
       - checkout
-      - run: go install golang.org/x/tools/cmd/goimports
+      - go/load-cache
+      - go/mod-download
+      - go/save-cache
+      - go/test:
+          covermode: atomic
+          failfast: true
+          race: true
+
+  lint:
+    executor:
+      name: go/default
+      tag: "1.14"
+    steps:
+      - checkout
+      - go/load-cache
+      - go/mod-download
       - run:
-          name: build
+          name: downloads
           command: |
-            set -eux -o pipefail 
-            go build ./cmd/goannotate/annotators/testdata/impl
-            go build cloudeng.io/go/cmd/goannotate/annotators/testdata/impl
-            go get -v -t -d ./...
-            go test -v ./...
+            go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.27.0
+            go get github.com/matthewloring/validjson/cmd/validjson
+            go install -x github.com/golangci/golangci-lint/cmd/golangci-lint
+            go install -x github.com/matthewloring/validjson/cmd/validjson
+      - go/save-cache
+      - run:
+          name: lint
+          command: |
+            golangci-lint run ./...
+            validjson ./...
+
+version: 2.1
+orbs:
+  go: circleci/go@1.1.2
+workflows:
+  main:
+    jobs:
+      - test
+      - lint
