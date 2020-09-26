@@ -149,10 +149,11 @@ Annotator represents the interface that all annotators must implement.
 type EnsureCopyrightAndLicense struct {
 	EssentialOptions `yaml:",inline"`
 
-	Copyright       string `yaml:"copyright" annotator:"desired copyright notice."`
-	License         string `yaml:"license" annotator:"desired license notice."`
-	UpdateCopyright bool   `yaml:"updateCopyright" annotator:"set to true to update existing copyright notice"`
-	UpdateLicense   bool   `yaml:"updateLicense" annotator:"set to true to update existing license notice"`
+	Copyright       string   `yaml:"copyright" annotator:"desired copyright notice."`
+	Exclusions      []string `yaml:"exclusions" annotator:"regular expressions for files to be excluded."`
+	License         string   `yaml:"license" annotator:"desired license notice."`
+	UpdateCopyright bool     `yaml:"updateCopyright" annotator:"set to true to update existing copyright notice"`
+	UpdateLicense   bool     `yaml:"updateLicense" annotator:"set to true to update existing license notice"`
 }
 ```
 EnsureCopyrightAndLicense represents an annotator that can insert or replace
