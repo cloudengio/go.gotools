@@ -8,8 +8,10 @@ import (
 	"context"
 	"fmt"
 	"go/ast"
+	"regexp"
 	"strings"
 
+	"cloudeng.io/errors"
 	"cloudeng.io/go/cmd/goannotate/annotators/internal"
 	"cloudeng.io/go/locate"
 	"cloudeng.io/text/edit"
@@ -22,10 +24,11 @@ import (
 type EnsureCopyrightAndLicense struct {
 	EssentialOptions `yaml:",inline"`
 
-	Copyright       string `yaml:"copyright" annotator:"desired copyright notice."`
-	License         string `yaml:"license" annotator:"desired license notice."`
-	UpdateCopyright bool   `yaml:"updateCopyright" annotator:"set to true to update existing copyright notice"`
-	UpdateLicense   bool   `yaml:"updateLicense" annotator:"set to true to update existing license notice"`
+	Copyright       string   `yaml:"copyright" annotator:"desired copyright notice."`
+	Exclusions      []string `yaml:"exclusions" annotator:"regular expressions for files to be excluded."`
+	License         string   `yaml:"license" annotator:"desired license notice."`
+	UpdateCopyright bool     `yaml:"updateCopyright" annotator:"set to true to update existing copyright notice"`
+	UpdateLicense   bool     `yaml:"updateLicense" annotator:"set to true to update existing license notice"`
 }
 
 func init() {
@@ -57,6 +60,20 @@ func (ec *EnsureCopyrightAndLicense) Do(ctx context.Context, root string, pkgs [
 	if len(ec.Copyright) == 0 {
 		return fmt.Errorf("missing or empty copyright specified in the configuration file")
 	}
+
+	errs := errors.M{}
+	exclusionREs := make([]*regexp.Regexp, len(ec.Exclusions))
+	for i, expr := range ec.Exclusions {
+		re, err := regexp.Compile(expr)
+		if err != nil {
+			errs.Append(fmt.Errorf("exclusion %v: failed to compile:%v", expr, err))
+			continue
+		}
+		exclusionREs[i] = re
+	}
+	if err := errs.Err(); err != nil {
+		return err
+	}
 	locator := locate.New(
 		concurrencyOpt(ec.Concurrency),
 		locate.Trace(Verbosef),
@@ -82,6 +99,15 @@ func (ec *EnsureCopyrightAndLicense) Do(ctx context.Context, root string, pkgs [
 		comments ast.CommentMap,
 		file *ast.File,
 		mask locate.HitMask) {
+
+		for _, re := range exclusionREs {
+			if re.MatchString(filename) {
+				edits[filename] = nil
+				dirty[filename] = true
+				fmt.Printf("ignoring: %v\n", filename)
+				return
+			}
+		}
 
 		tokenFile := pkg.Fset.File(file.Pos())
 
