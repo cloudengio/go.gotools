@@ -55,15 +55,10 @@ present at the top of all files. It will not remove existing notices.`,
 	)
 }
 
-// Do implements annotators.Annotations.
-func (ec *EnsureCopyrightAndLicense) Do(ctx context.Context, root string, pkgs []string) error {
-	if len(ec.Copyright) == 0 {
-		return fmt.Errorf("missing or empty copyright specified in the configuration file")
-	}
-
+func compileREs(exprs []string) ([]*regexp.Regexp, error) {
 	errs := errors.M{}
-	exclusionREs := make([]*regexp.Regexp, len(ec.Exclusions))
-	for i, expr := range ec.Exclusions {
+	exclusionREs := make([]*regexp.Regexp, len(exprs))
+	for i, expr := range exprs {
 		re, err := regexp.Compile(expr)
 		if err != nil {
 			errs.Append(fmt.Errorf("exclusion %v: failed to compile:%v", expr, err))
@@ -71,7 +66,16 @@ func (ec *EnsureCopyrightAndLicense) Do(ctx context.Context, root string, pkgs [
 		}
 		exclusionREs[i] = re
 	}
-	if err := errs.Err(); err != nil {
+	return exclusionREs, errs.Err()
+}
+
+// Do implements annotators.Annotations.
+func (ec *EnsureCopyrightAndLicense) Do(ctx context.Context, root string, pkgs []string) error {
+	if len(ec.Copyright) == 0 {
+		return fmt.Errorf("missing or empty copyright specified in the configuration file")
+	}
+	exclusionREs, err := compileREs(ec.Exclusions)
+	if err != nil {
 		return err
 	}
 	locator := locate.New(
@@ -89,62 +93,75 @@ func (ec *EnsureCopyrightAndLicense) Do(ctx context.Context, root string, pkgs [
 		return fmt.Errorf("failed to locate functions and/or interface implementations: %v", err)
 	}
 
-	newCopyright := strings.TrimSuffix(ec.Copyright, "\n") + "\n"
-	newLicense := strings.TrimSuffix(ec.License, "\n") + "\n\n"
+	state := walkerState{
+		EnsureCopyrightAndLicense: ec,
+		dirty:                     map[string]bool{},
+		edits:                     map[string][]edit.Delta{},
+		exclusionREs:              exclusionREs,
+		newCopyright:              strings.TrimSuffix(ec.Copyright, "\n") + "\n",
+		newLicense:                strings.TrimSuffix(ec.License, "\n") + "\n\n",
+	}
+	locator.WalkFiles(state.determineEdits)
+	return applyEdits(ctx, computeOutputs(root, state.edits), state.edits)
+}
 
-	dirty := map[string]bool{}
-	edits := map[string][]edit.Delta{}
-	locator.WalkFiles(func(filename string,
-		pkg *packages.Package,
-		comments ast.CommentMap,
-		file *ast.File,
-		mask locate.HitMask) {
+type walkerState struct {
+	*EnsureCopyrightAndLicense
+	dirty        map[string]bool
+	edits        map[string][]edit.Delta
+	exclusionREs []*regexp.Regexp
+	newCopyright string
+	newLicense   string
+}
 
-		for _, re := range exclusionREs {
-			if re.MatchString(filename) {
-				edits[filename] = nil
-				dirty[filename] = true
-				fmt.Printf("ignoring: %v\n", filename)
-				return
-			}
+func (ws *walkerState) determineEdits(filename string,
+	pkg *packages.Package,
+	comments ast.CommentMap,
+	file *ast.File,
+	mask locate.HitMask) {
+
+	for _, re := range ws.exclusionREs {
+		if re.MatchString(filename) {
+			ws.edits[filename] = nil
+			ws.dirty[filename] = true
+			return
 		}
+	}
 
-		tokenFile := pkg.Fset.File(file.Pos())
+	tokenFile := pkg.Fset.File(file.Pos())
 
-		var copyright *ast.Comment
-		var licenseStart, licenseLen int
-		for _, cg := range file.Comments {
-			if tokenFile.Offset(cg.Pos()) == 0 && cg != file.Doc {
-				// Find comment block at top of file that is not a 'doc' comment.
-				comments := cg.List
-				sanitized := strings.TrimSpace(strings.ToLower(cg.Text()))
-				if strings.HasPrefix(sanitized, "copyright") {
-					copyright = comments[0]
-					if len(comments) > 1 {
-						at := comments[1].Pos()
-						licenseStart = tokenFile.Offset(at)
-						licenseLen = tokenFile.Offset(cg.End()) - licenseStart
-					}
+	var copyright *ast.Comment
+	var licenseStart, licenseLen int
+	for _, cg := range file.Comments {
+		if tokenFile.Offset(cg.Pos()) == 0 && cg != file.Doc {
+			// Find comment block at top of file that is not a 'doc' comment.
+			comments := cg.List
+			sanitized := strings.TrimSpace(strings.ToLower(cg.Text()))
+			if strings.HasPrefix(sanitized, "copyright") {
+				copyright = comments[0]
+				if len(comments) > 1 {
+					at := comments[1].Pos()
+					licenseStart = tokenFile.Offset(at)
+					licenseLen = tokenFile.Offset(cg.End()) - licenseStart
 				}
 			}
 		}
-		var deltas []edit.Delta
-		if copyright != nil {
-			if ec.UpdateCopyright {
-				deltas = append(deltas, edit.ReplaceString(0, len(copyright.Text)+1, newCopyright))
-			}
-			if licenseStart != 0 && len(ec.License) > 0 && ec.UpdateLicense {
-				deltas = append(deltas, edit.ReplaceString(licenseStart, licenseLen, newLicense))
-			}
-		} else {
-			// New copy right and license.
-			deltas = append(deltas, edit.InsertString(0, newCopyright))
-			if len(ec.License) > 0 {
-				deltas = append(deltas, edit.InsertString(0, newLicense))
-			}
+	}
+	var deltas []edit.Delta
+	if copyright != nil {
+		if ws.UpdateCopyright {
+			deltas = append(deltas, edit.ReplaceString(0, len(copyright.Text)+1, ws.newCopyright))
 		}
-		edits[filename] = append(edits[filename], deltas...)
-		dirty[filename] = true
-	})
-	return applyEdits(ctx, computeOutputs(root, edits), edits)
+		if licenseStart != 0 && len(ws.License) > 0 && ws.UpdateLicense {
+			deltas = append(deltas, edit.ReplaceString(licenseStart, licenseLen, ws.newLicense))
+		}
+	} else {
+		// New copy right and license.
+		deltas = append(deltas, edit.InsertString(0, ws.newCopyright))
+		if len(ws.License) > 0 {
+			deltas = append(deltas, edit.InsertString(0, ws.newLicense))
+		}
+	}
+	ws.edits[filename] = append(ws.edits[filename], deltas...)
+	ws.dirty[filename] = true
 }
