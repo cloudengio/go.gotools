@@ -21,6 +21,7 @@ var expectedPersonalApache = []testutil.DiffReport{
 > // license that can be found in the LICENSE file.
 > 
 `},
+	{Name: "exclude.go", Diff: ""},
 	{Name: "packagecomment.go", Diff: `0a1,4
 > // Copyright 2020 Cosmos Nicolaou. All rights reserved.
 > // Use of this source code is governed by the Apache-2.0
@@ -42,6 +43,7 @@ var expectedPersonalApacheUpdate = []testutil.DiffReport{
 > // license that can be found in the LICENSE file.
 > 
 `},
+	{Name: "exclude.go", Diff: ""},
 	{Name: "packagecomment.go", Diff: `0a1,4
 > // Copyright 2020 Cosmos Nicolaou. All rights reserved.
 > // Use of this source code is governed by the Apache-2.0
