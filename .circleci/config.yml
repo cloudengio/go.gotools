@@ -21,13 +21,11 @@ jobs:
       - run:
           name: downloads
           command: |
-            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
-            go install github.com/matthewloring/validjson/cmd/validjson
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/
       - run:
           name: lint
           command: |
             golangci-lint run ./...
-            validjson ./...
 
 version: 2.1
 workflows:
