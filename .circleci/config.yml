@@ -2,7 +2,7 @@ jobs:
   test:
     executor:
       name: go/default
-      tag: "1.14"
+      tag: "1.18"
     steps:
       - checkout
       - go/load-cache
@@ -10,8 +10,7 @@ jobs:
       - run:
           name: goimports
           command: |
-            go get golang.org/x/tools/cmd/goimports
-            go install -x golang.org/x/tools/cmd/goimports
+            go install golang.org/x/tools/cmd/goimports
       - go/save-cache
       - go/test:
           covermode: atomic
@@ -29,9 +28,8 @@ jobs:
       - run:
           name: downloads
           command: |
-            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.31.0
-            go get github.com/matthewloring/validjson/cmd/validjson
-            go install -x github.com/matthewloring/validjson/cmd/validjson
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
+            go install github.com/matthewloring/validjson/cmd/validjson
       - go/save-cache
       - run:
           name: lint
@@ -41,7 +39,7 @@ jobs:
 
 version: 2.1
 orbs:
-  go: circleci/go@1.3.0
+  go: circleci/go@1.7.1
 workflows:
   main:
     jobs:
