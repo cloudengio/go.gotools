@@ -158,13 +158,17 @@ func (t *T) trace(format string, args ...interface{}) {
 // as a go list expression (ie. one that starts with ./ or contains '...').
 // For example, all of the following match all interfaces in
 // acme.com/a/b:
-//   acme.com/a/b
-//   acme.com/a/b.
-//   acme.com/a/b..*
+//
+//	acme.com/a/b
+//	acme.com/a/b.
+//	acme.com/a/b..*
+//
 // Note that the . separator in the type name is not used as part of the
 // regular expression. The following will match a subset of the interfaces:
-//   acme.com/a/b.prefix
-//   acme.com/a/b.thisInterface$
+//
+//	acme.com/a/b.prefix
+//	acme.com/a/b.thisInterface$
+//
 // Note that the two forms 'go list' and <package>.<regex> cannot be combined.
 func (t *T) AddInterfaces(interfaces ...string) {
 	t.interfacePackages = append(t.interfacePackages, interfaces...)
