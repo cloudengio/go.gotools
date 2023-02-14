@@ -3,7 +3,7 @@ module cloudeng.io/go
 go 1.14
 
 require (
-	cloudeng.io/cmdutil v0.0.0-20230210203143-e63188d27316
+	cloudeng.io/cmdutil v0.0.0-20230214072348-e50d5014b274
 	cloudeng.io/errors v0.0.8
 	cloudeng.io/path v0.0.8
 	cloudeng.io/sync v0.0.8
