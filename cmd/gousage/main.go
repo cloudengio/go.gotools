@@ -110,9 +110,15 @@ func writeAllowed(filename string) error {
 }
 
 func writeGo(filename string, text string) error {
+	cmd := exec.Command("gofmt")
+	cmd.Stdin = strings.NewReader(text)
+	formatted, err := cmd.CombinedOutput()
+	if err != nil {
+		return err
+	}
 	fmt.Printf("writing: %v\n", filename)
 	if err := writeAllowed(filename); err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filename, []byte(text), 0622)
+	return ioutil.WriteFile(filename, formatted, 0622)
 }
