@@ -18,7 +18,9 @@ import (
 
 // LogCallWithContext represents a function call generator for a logging
 // call with the following signature:
-//   func (ctx <contextType>, functionName, callerLocation, format string, arguments ...interface{}) func(ctx <contextType>, format string, namedResults ...interface{})
+//
+//	func (ctx <contextType>, functionName, callerLocation, format string, arguments ...interface{}) func(ctx <contextType>, format string, namedResults ...interface{})
+//
 // See LogCallWithContextDescription for a complete description.
 type LogCallWithContext struct {
 	EssentialOptions `yaml:",inline"`
