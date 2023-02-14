@@ -27,11 +27,11 @@ type myStruct struct{}
 
 func Pointers(a *int, b *myStruct, c unsafe.Pointer) {}
 
-func Unknown(a rand.Rand, b io.Reader) (int, error)
+func Unknown(a rand.Rand, b io.Reader) (int, error) { return 0, nil }
 
 func Stringer(a bytes.Buffer, b *strings.Builder) {}
 
-func Anon(_ int, _ string)
+func Anon(_ int, _ string) {}
 
 type NamedInt int
 type NamedString string
