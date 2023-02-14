@@ -1,6 +1,9 @@
 # go.gotools
 
-[![CircleCI](https://circleci.com/gh/cloudengio/go.gotools.svg?style=svg)](https://circleci.com/gh/cloudengio/go.gotools) [![Go Report Card](https://goreportcard.com/badge/cloudeng.io/go)](https://goreportcard.com/report/cloudeng.io/go)
+![linux](https://github.com/cloudengio/go.gotiiks/actions/workflows/linux.yml/badge.svg)
+![macos](https://github.com/cloudengio/go.gotiiks/actions/workflows/macos.yml/badge.svg)
+![windows](https://github.com/cloudengio/go.gotiiks/actions/workflows/windows.yml/badge.svg)
+![CodeQL](https://github.com/cloudengio/go.gotiiks/actions/workflows/codeql.yml/badge.svg)
 
 go tools and packages for manipulating go source code and
 generating documentation.

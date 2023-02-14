@@ -38,6 +38,9 @@ func filterUsage(text string) string {
 		if strings.HasPrefix(sc.Text(), "go:generate") {
 			continue
 		}
+		if strings.Contains(sc.Text(), "flag: help requested") {
+			continue
+		}
 		if !first {
 			out.WriteString(prev)
 			out.WriteString("\n")

@@ -56,10 +56,12 @@ func fieldWithTag(typ reflect.Type, tag string) int {
 
 // DelegatedYAML will unmarshal the yaml configuration into a yaml.MapSlice
 // and named fields. Given:
-//   struct {
-//     YAML.MapSlice
-//     Type string `yaml:"type"`
-//   }
+//
+//	struct {
+//	  YAML.MapSlice
+//	  Type string `yaml:"type"`
+//	}
+//
 // it will unmarshal the entire config into the MapSlice and if any of
 // the fields in MapSlice have a key 'type', the value for that key will
 // assigned to the Type field.

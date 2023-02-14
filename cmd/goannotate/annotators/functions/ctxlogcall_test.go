@@ -5,6 +5,7 @@
 package functions_test
 
 import (
+	"context"
 	"go/ast"
 	"go/types"
 	"reflect"
@@ -13,7 +14,6 @@ import (
 	"cloudeng.io/errors"
 	"cloudeng.io/go/cmd/goannotate/annotators/functions"
 	"cloudeng.io/go/cmd/goannotate/annotators/internal/testutil"
-	"golang.org/x/net/context"
 	"golang.org/x/tools/go/packages"
 )
 
