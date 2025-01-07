@@ -37,7 +37,7 @@ func TestComments(t *testing.T) {
 
 	for i, fn := range fns {
 		cm := ast.NewCommentMap(fn.Package.Fset, fn.File, fn.File.Comments)
-		calls := locateutil.FunctionCalls(fn.Decl, regexp.MustCompile("ioutil.ReadFile"), cases[i].deferred)
+		calls := locateutil.FunctionCalls(fn.Decl, regexp.MustCompile("os.ReadFile"), cases[i].deferred)
 		if got, want := len(calls), 1; got != want {
 			t.Errorf("got %v, want %v", got, want)
 			continue
