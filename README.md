@@ -1,9 +1,9 @@
 # go.gotools
 
-![linux](https://github.com/cloudengio/go.gotiiks/actions/workflows/linux.yml/badge.svg)
-![macos](https://github.com/cloudengio/go.gotiiks/actions/workflows/macos.yml/badge.svg)
-![windows](https://github.com/cloudengio/go.gotiiks/actions/workflows/windows.yml/badge.svg)
-![CodeQL](https://github.com/cloudengio/go.gotiiks/actions/workflows/codeql.yml/badge.svg)
+![linux](https://github.com/cloudengio/go.gotools/actions/workflows/linux.yml/badge.svg)
+![macos](https://github.com/cloudengio/go.gotools/actions/workflows/macos.yml/badge.svg)
+![windows](https://github.com/cloudengio/go.gotools/actions/workflows/windows.yml/badge.svg)
+![CodeQL](https://github.com/cloudengio/go.gotools/actions/workflows/codeql.yml/badge.svg)
 
 go tools and packages for manipulating go source code and
 generating documentation.
