@@ -7,6 +7,7 @@ package locate_test
 import (
 	"context"
 	"go/ast"
+	"path/filepath"
 	"testing"
 
 	"cloudeng.io/go/locate"
@@ -35,11 +36,11 @@ func TestComments(t *testing.T) {
 		positions = append(positions, pos.String())
 	})
 	commentsAt := []string{
-		"comments/doc.go:1:1",
-		"comments/doc.go:4:11",
-		"comments/doc.go:6:1",
-		"comments/funcs.go:4:20",
-		"data/embedded/embedded.go:17:1",
+		filepath.Join("comments", "doc.go") + ":1:1",
+		filepath.Join("comments", "doc.go") + ":4:11",
+		filepath.Join("comments", "doc.go") + ":6:1",
+		filepath.Join("comments", "funcs.go") + ":4:20",
+		filepath.Join("data", "embedded", "embedded.go") + ":17:1",
 	}
 	compareSlices(t, positions, commentsAt)
 }
