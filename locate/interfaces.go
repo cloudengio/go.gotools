@@ -32,7 +32,7 @@ func (t *T) findInterfaces(ctx context.Context, interfaces []string) error {
 	return group.Wait()
 }
 
-func (t *T) findEmbeddedInterfaces(ctx context.Context, pkgPath string, ifcType *types.Interface) (map[string]bool, error) {
+func (t *T) findEmbeddedInterfaces(_ context.Context, pkgPath string, ifcType *types.Interface) (map[string]bool, error) {
 	if ifcType.NumEmbeddeds() == 0 {
 		return nil, nil
 	}

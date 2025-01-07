@@ -28,7 +28,7 @@ func (t *T) findImplementations(ctx context.Context, packages []string) error {
 
 var allfuncs = regexp.MustCompile(".*")
 
-func (t *T) findImplementationInPackage(ctx context.Context, pkgPath string) error {
+func (t *T) findImplementationInPackage(_ context.Context, pkgPath string) error {
 	pkg := t.loader.lookupPackage(pkgPath)
 	if pkg == nil {
 		return fmt.Errorf("locating interface implementations: failed to lookup: %v", pkgPath)

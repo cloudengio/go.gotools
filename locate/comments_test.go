@@ -25,12 +25,11 @@ func TestComments(t *testing.T) {
 
 	positions := []string{}
 	locator.WalkComments(func(
-		absoluteFilename string,
-		re string,
-		node ast.Node,
+		_, _ string,
+		_ ast.Node,
 		cg *ast.CommentGroup,
 		pkg *packages.Package,
-		file *ast.File,
+		_ *ast.File,
 	) {
 		pos := pkg.Fset.PositionFor(cg.Pos(), false)
 		positions = append(positions, pos.String())

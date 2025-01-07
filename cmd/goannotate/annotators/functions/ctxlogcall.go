@@ -68,7 +68,7 @@ const ctxCallTemplateText = `defer {{.FunctionName}}({{.ContextParam}}, "{{.Logg
 
 var ctxCallTemplate = template.Must(template.New("call").Parse(ctxCallTemplateText))
 
-func (lc *LogCallWithContext) Generate(fset *token.FileSet, fn *types.Func, decl *ast.FuncDecl) (string, error) {
+func (lc *LogCallWithContext) Generate(_ *token.FileSet, fn *types.Func, _ *ast.FuncDecl) (string, error) {
 	sig := fn.Type().(*types.Signature)
 	var ignore []int
 	ctxParam, hasContext := derive.HasCustomContext(sig, lc.ContextType)

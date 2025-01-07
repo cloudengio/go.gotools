@@ -50,7 +50,7 @@ func (sl *SimpleLogCall) Import() string {
 
 var simpleCallTemplate = template.Must(template.New("call").Parse(`{{.FunctionName}}({{.Params}})`))
 
-func (sl *SimpleLogCall) Generate(fset *token.FileSet, fn *types.Func, decl *ast.FuncDecl) (string, error) {
+func (sl *SimpleLogCall) Generate(_ *token.FileSet, fn *types.Func, _ *ast.FuncDecl) (string, error) {
 	sig := fn.Type().(*types.Signature)
 	var ignore []int
 	_, hasContext := derive.HasCustomContext(sig, sl.ContextType)

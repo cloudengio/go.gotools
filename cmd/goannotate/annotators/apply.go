@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -77,7 +76,7 @@ func editFile(ctx context.Context, src, dst string, deltas []edit.Delta) error {
 	if err != nil {
 		return err
 	}
-	buf, err := ioutil.ReadFile(src)
+	buf, err := os.ReadFile(src)
 	if err != nil {
 		return err
 	}
@@ -93,7 +92,7 @@ func editFile(ctx context.Context, src, dst string, deltas []edit.Delta) error {
 		// This is most likely because the edit messed up the go code
 		// and goimports is unhappy with it as its input. To help with
 		// debugging write the edited code to a temp file.
-		if tmpfile, err := ioutil.TempFile("", "annotate-"); err == nil {
+		if tmpfile, err := os.CreateTemp("", "annotate-"); err == nil {
 			_, _ = io.Copy(tmpfile, bytes.NewBuffer(buf))
 			tmpfile.Close()
 			fmt.Printf("wrote modified contents of %v to %v\n", src, tmpfile.Name())
@@ -103,5 +102,5 @@ func editFile(ctx context.Context, src, dst string, deltas []edit.Delta) error {
 		}
 		return fmt.Errorf("%v: %v", strings.Join(cmd.Args, " "), err)
 	}
-	return ioutil.WriteFile(dst, out, info.Mode().Perm())
+	return os.WriteFile(dst, out, info.Mode().Perm())
 }

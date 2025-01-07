@@ -239,7 +239,7 @@ func (t *T) Do(ctx context.Context) error {
 // reused.
 func (t *T) MakeCommentMaps() map[*ast.File]ast.CommentMap {
 	cmaps := map[*ast.File]ast.CommentMap{}
-	t.WalkFiles(func(absoluteFilename string, pkg *packages.Package, comments ast.CommentMap, file *ast.File, has HitMask) {
+	t.WalkFiles(func(_ string, pkg *packages.Package, _ ast.CommentMap, file *ast.File, _ HitMask) {
 		cmaps[file] = ast.NewCommentMap(pkg.Fset, file, file.Comments)
 
 	})

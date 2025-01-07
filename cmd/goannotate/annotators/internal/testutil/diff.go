@@ -12,7 +12,7 @@ import (
 	"cloudeng.io/errors"
 )
 
-func DiffOneFile(t *testing.T, a, b string) string {
+func DiffOneFile(a, b string) string {
 	cmd := exec.Command("diff", a, b)
 	// Ignore return code since differences are expected.
 	out, _ := cmd.CombinedOutput()
@@ -35,7 +35,7 @@ func DiffMultipleFiles(t *testing.T, a, b []string) []DiffReport {
 	for i := range a {
 		diffs = append(diffs, DiffReport{
 			Name: filepath.Base(a[i]),
-			Diff: DiffOneFile(t, a[i], b[i]),
+			Diff: DiffOneFile(a[i], b[i]),
 		})
 	}
 	return diffs

@@ -33,7 +33,7 @@ func TestFormatting(t *testing.T) {
 
 	parameters, parametersContext, results := []formatted{}, []formatted{}, []formatted{}
 
-	locator.WalkFunctions(func(name string, pkg *packages.Package, file *ast.File, fn *types.Func, decl *ast.FuncDecl, implemented []string) {
+	locator.WalkFunctions(func(_ string, _ *packages.Package, _ *ast.File, fn *types.Func, _ *ast.FuncDecl, _ []string) {
 		signature := fn.Type().(*types.Signature)
 		spec, args := derive.ArgsForParams(signature)
 		parameters = append(parameters, formatted{spec, strings.Join(args, ", ")})

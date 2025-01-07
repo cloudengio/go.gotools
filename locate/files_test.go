@@ -24,7 +24,7 @@ func TestFilesAndImports(t *testing.T) {
 		t.Fatalf("locate.Do: %v", err)
 	}
 	start, stop, masks := []string{}, []string{}, []string{}
-	locator.WalkFiles(func(filename string, pkg *packages.Package, comments ast.CommentMap, file *ast.File, has locate.HitMask) {
+	locator.WalkFiles(func(_ string, pkg *packages.Package, _ ast.CommentMap, file *ast.File, has locate.HitMask) {
 		if has == 0 {
 			return
 		}

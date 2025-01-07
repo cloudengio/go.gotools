@@ -25,7 +25,7 @@ func execute(t *testing.T, typeName string) (string, []string) {
 	generator := functions.Lookup(here + typeName)
 	var calls []string
 	errs := &errors.M{}
-	locator.WalkFunctions(func(fullname string, pkg *packages.Package, file *ast.File, fn *types.Func, decl *ast.FuncDecl, implements []string) {
+	locator.WalkFunctions(func(_ string, pkg *packages.Package, _ *ast.File, fn *types.Func, decl *ast.FuncDecl, _ []string) {
 		call, err := generator.Generate(pkg.Fset, fn, decl)
 		calls = append(calls, call)
 		errs.Append(err)

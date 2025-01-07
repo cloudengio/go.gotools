@@ -132,7 +132,7 @@ func TestFunctionDecls(t *testing.T) {
 		t.Fatalf("locate.Do: %v", err)
 	}
 	start, stop := []string{}, []string{}
-	locator.WalkFunctions(func(fullname string, pkg *packages.Package, file *ast.File, fn *types.Func, decl *ast.FuncDecl, implemented []string) {
+	locator.WalkFunctions(func(_ string, pkg *packages.Package, _ *ast.File, _ *types.Func, decl *ast.FuncDecl, _ []string) {
 		begin := decl.Body.Pos()
 		end := decl.Body.End()
 		start = append(start, pkg.Fset.Position(begin).String())

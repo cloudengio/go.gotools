@@ -6,8 +6,8 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 
 	"cloudeng.io/go/cmd/goannotate/annotators"
 	"gopkg.in/yaml.v2"
@@ -24,7 +24,7 @@ type config struct {
 
 func configFromFile(filename string) (*config, error) {
 	config := &config{}
-	buf, err := ioutil.ReadFile(filename)
+	buf, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %v", err)
 	}

@@ -23,7 +23,7 @@ const here = "cloudeng.io/go/locate/testdata/"
 func listInterfaces(locator *locate.T) []string {
 	out := []string{}
 	locator.WalkInterfaces(func(name string, pkg *packages.Package,
-		file *ast.File, decl *ast.TypeSpec, ifc *types.Interface) {
+		_ *ast.File, decl *ast.TypeSpec, _ *types.Interface) {
 		line := fmt.Sprintf("%s interface %s", name, pkg.Fset.PositionFor(decl.Pos(), false))
 		out = append(out, line)
 	})
@@ -32,7 +32,7 @@ func listInterfaces(locator *locate.T) []string {
 
 func listFunctions(locator *locate.T) []string {
 	out := []string{}
-	locator.WalkFunctions(func(name string, pkg *packages.Package, file *ast.File, fn *types.Func, decl *ast.FuncDecl, implements []string) {
+	locator.WalkFunctions(func(name string, pkg *packages.Package, _ *ast.File, _ *types.Func, decl *ast.FuncDecl, implements []string) {
 		line := name
 		if len(implements) > 0 {
 			line += fmt.Sprintf(" implements %s", strings.Join(implements, ", "))
@@ -45,7 +45,7 @@ func listFunctions(locator *locate.T) []string {
 
 func listFiles(locator *locate.T) []string {
 	out := []string{}
-	locator.WalkFiles(func(name string, pkg *packages.Package, comments ast.CommentMap, file *ast.File, hitMask locate.HitMask) {
+	locator.WalkFiles(func(name string, _ *packages.Package, _ ast.CommentMap, file *ast.File, hitMask locate.HitMask) {
 		if hitMask == 0 {
 			return
 		}
