@@ -6,6 +6,7 @@ package annotators_test
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"cloudeng.io/go/cmd/goannotate/annotators"
@@ -50,7 +51,7 @@ func TestAddLogCall(t *testing.T) {
 	if err != nil {
 		t.Errorf("Do: %v", err)
 	}
-	original, copies := list(t, "testdata/impl/"), list(t, tmpdir)
+	original, copies := list(t, filepath.Join("testdata", "impl")), list(t, tmpdir)
 	diffs := testutil.DiffMultipleFiles(t, original, copies)
 	testutil.CompareDiffReports(t, diffs, expectedAddcall)
 }
