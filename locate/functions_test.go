@@ -39,15 +39,15 @@ func TestFunctions(t *testing.T) {
 		here + "data.Fn1",
 		here + "data.Fn2",
 	}, []string{
-		"data/functions.go:7:1",
-		"data/functions_more.go:3:1",
+		filepath.Join("data", "functions.go") + ":7:1",
+		filepath.Join("data", "functions_more.go") + ":3:1",
 	})
 	compareLocations(t, listFunctions(locator), []string{
 		here + "data.Fn1",
 		here + "data.Fn2",
 	}, []string{
-		"data/functions.go:7:1",
-		"data/functions_more.go:3:1",
+		filepath.Join("data", "functions.go") + ":7:1",
+		filepath.Join("data", "functions_more.go") + ":3:1",
 	})
 	compareFiles(t, listFiles(locator),
 		filepath.Join("data", "functions.go")+": data",
@@ -70,8 +70,8 @@ func TestMethods(t *testing.T) {
 		"(*cloudeng.io/go/locate/testdata/data.rcv).Fn1",
 		here + "data.Fn1",
 	}, []string{
-		"data/functions.go:13:1",
-		"data/functions.go:7:1",
+		filepath.Join("data", "functions.go") + ":13:1",
+		filepath.Join("data", "functions.go") + ":7:1",
 	})
 }
 
