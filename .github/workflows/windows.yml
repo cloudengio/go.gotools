@@ -30,6 +30,7 @@ jobs:
       - name: Install tools
         run: |
           go install cloudeng.io/citools/multimod@latest
+          go install golang.org/x/tools/cmd/goimports@latest
 
       - name: Test
         run: multimod --config=.multimod.yaml test
