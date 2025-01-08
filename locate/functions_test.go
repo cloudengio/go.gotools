@@ -26,7 +26,7 @@ func TestFunctions(t *testing.T) {
 	compareLocations(t, listFunctions(locator), []string{
 		here + "data.Fn2",
 	}, []string{
-		"data/functions_more.go:3:1",
+		filepath.Join("data", "functions_more.go") + ":3:1",
 	})
 
 	locator = locate.New()
