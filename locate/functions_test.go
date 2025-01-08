@@ -85,7 +85,7 @@ func TestMainPackage(t *testing.T) {
 	compareLocations(t, listFunctions(locator), []string{
 		here + "cmd.InMain",
 	}, []string{
-		"cmd/main.go:6:1",
+		filepath.Join("cmd", "main.go") + ":6:1",
 	})
 
 	locator = locate.New(locate.IncludeMethods(true))
@@ -97,8 +97,8 @@ func TestMainPackage(t *testing.T) {
 		"(*cloudeng.io/go/locate/testdata/cmd.rcvr).InMain",
 		here + "cmd.InMain",
 	}, []string{
-		"cmd/main.go:12:1",
-		"cmd/main.go:6:1",
+		filepath.Join("cmd", "main.go") + ":12:1",
+		filepath.Join("cmd", "main.go") + ":6:1",
 	})
 }
 
