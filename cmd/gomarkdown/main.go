@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/doc"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -152,5 +151,5 @@ func writeMarkdown(filename string, text string) error {
 	if err := writeAllowed(filename); err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filename, []byte(text), 0622)
+	return os.WriteFile(filename, []byte(text), 0622)
 }

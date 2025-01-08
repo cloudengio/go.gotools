@@ -77,12 +77,12 @@ func (rc *RmLogCall) Do(ctx context.Context, root string, pkgs []string) error {
 	commentMaps := locator.MakeCommentMaps()
 
 	edits := map[string][]edit.Delta{}
-	locator.WalkFunctions(func(fullname string,
+	locator.WalkFunctions(func(_ string,
 		pkg *packages.Package,
 		file *ast.File,
-		fn *types.Func,
+		_ *types.Func,
 		decl *ast.FuncDecl,
-		implements []string) {
+		_ []string) {
 		if locateutil.FunctionStatements(decl) == 0 {
 			return
 		}

@@ -26,7 +26,7 @@ func TestFunctions(t *testing.T) {
 	compareLocations(t, listFunctions(locator), []string{
 		here + "data.Fn2",
 	}, []string{
-		"data/functions_more.go:3:1",
+		filepath.Join("data", "functions_more.go") + ":3:1",
 	})
 
 	locator = locate.New()
@@ -39,15 +39,15 @@ func TestFunctions(t *testing.T) {
 		here + "data.Fn1",
 		here + "data.Fn2",
 	}, []string{
-		"data/functions.go:7:1",
-		"data/functions_more.go:3:1",
+		filepath.Join("data", "functions.go") + ":7:1",
+		filepath.Join("data", "functions_more.go") + ":3:1",
 	})
 	compareLocations(t, listFunctions(locator), []string{
 		here + "data.Fn1",
 		here + "data.Fn2",
 	}, []string{
-		"data/functions.go:7:1",
-		"data/functions_more.go:3:1",
+		filepath.Join("data", "functions.go") + ":7:1",
+		filepath.Join("data", "functions_more.go") + ":3:1",
 	})
 	compareFiles(t, listFiles(locator),
 		filepath.Join("data", "functions.go")+": data",
@@ -70,8 +70,8 @@ func TestMethods(t *testing.T) {
 		"(*cloudeng.io/go/locate/testdata/data.rcv).Fn1",
 		here + "data.Fn1",
 	}, []string{
-		"data/functions.go:13:1",
-		"data/functions.go:7:1",
+		filepath.Join("data", "functions.go") + ":13:1",
+		filepath.Join("data", "functions.go") + ":7:1",
 	})
 }
 
@@ -85,7 +85,7 @@ func TestMainPackage(t *testing.T) {
 	compareLocations(t, listFunctions(locator), []string{
 		here + "cmd.InMain",
 	}, []string{
-		"cmd/main.go:6:1",
+		filepath.Join("cmd", "main.go") + ":6:1",
 	})
 
 	locator = locate.New(locate.IncludeMethods(true))
@@ -97,8 +97,8 @@ func TestMainPackage(t *testing.T) {
 		"(*cloudeng.io/go/locate/testdata/cmd.rcvr).InMain",
 		here + "cmd.InMain",
 	}, []string{
-		"cmd/main.go:12:1",
-		"cmd/main.go:6:1",
+		filepath.Join("cmd", "main.go") + ":12:1",
+		filepath.Join("cmd", "main.go") + ":6:1",
 	})
 }
 
@@ -132,7 +132,7 @@ func TestFunctionDecls(t *testing.T) {
 		t.Fatalf("locate.Do: %v", err)
 	}
 	start, stop := []string{}, []string{}
-	locator.WalkFunctions(func(fullname string, pkg *packages.Package, file *ast.File, fn *types.Func, decl *ast.FuncDecl, implemented []string) {
+	locator.WalkFunctions(func(_ string, pkg *packages.Package, _ *ast.File, _ *types.Func, decl *ast.FuncDecl, _ []string) {
 		begin := decl.Body.Pos()
 		end := decl.Body.End()
 		start = append(start, pkg.Fset.Position(begin).String())

@@ -2,7 +2,7 @@ package functions
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 )
 
 func Empty() {
@@ -12,13 +12,13 @@ func HasCall() {
 	// nologcall:
 
 	// Comment before.
-	ioutil.ReadFile("x") // Comment on the same line.
+	os.ReadFile("x") // Comment on the same line.
 	// Comment after.
 }
 
 func HasDefer() {
 	// Comment before.
-	defer ioutil.ReadFile("x") // Comment on the same line.
+	defer os.ReadFile("x") // Comment on the same line.
 	// Comment after.
 	// nologcall:
 }
@@ -32,7 +32,7 @@ func HasOtherDefer() {
 }
 
 func Expressions() {
-	x := ioutil.ReadFile
+	x := os.ReadFile
 	x("x")
 
 	y := func() func() {

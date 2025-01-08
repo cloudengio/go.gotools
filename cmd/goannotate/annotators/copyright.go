@@ -116,9 +116,9 @@ type walkerState struct {
 
 func (ws *walkerState) determineEdits(filename string,
 	pkg *packages.Package,
-	comments ast.CommentMap,
+	_ ast.CommentMap,
 	file *ast.File,
-	mask locate.HitMask) {
+	_ locate.HitMask) {
 
 	for _, re := range ws.exclusionREs {
 		if re.MatchString(filename) {

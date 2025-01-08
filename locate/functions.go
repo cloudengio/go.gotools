@@ -32,7 +32,7 @@ func (t *T) findFunctions(ctx context.Context, functions []string) error {
 	return group.Wait()
 }
 
-func (t *T) findFunctionsInPackage(ctx context.Context, pkgPath string, fnRE *regexp.Regexp) error {
+func (t *T) findFunctionsInPackage(_ context.Context, pkgPath string, fnRE *regexp.Regexp) error {
 	pkg := t.loader.lookupPackage(pkgPath)
 	if pkg == nil {
 		return fmt.Errorf("locating functions: failed to lookup: %v", pkgPath)

@@ -60,7 +60,7 @@ func handleInterfaces(ctx context.Context, ifcs string, pkgs []string) error {
 	if err := locator.Do(ctx); err != nil {
 		cmdutil.Exit("locator.Do failed: %v", err)
 	}
-	locator.WalkFunctions(func(fullname string, pkg *packages.Package, file *ast.File, fn *types.Func, decl *ast.FuncDecl, implements []string) {
+	locator.WalkFunctions(func(_ string, pkg *packages.Package, _ *ast.File, fn *types.Func, _ *ast.FuncDecl, implements []string) {
 		for _, ifc := range implements {
 			pos := pkg.Fset.PositionFor(fn.Pos(), false)
 			fmt.Printf("%v[%s]: %s\n", fn, ifc, pos)
@@ -76,7 +76,7 @@ func handleComments(ctx context.Context, comments string, pkgs []string) error {
 	if err := locator.Do(ctx); err != nil {
 		cmdutil.Exit("locator.Do failed: %v", err)
 	}
-	locator.WalkComments(func(re, absoluteFilename string, node ast.Node, cg *ast.CommentGroup, pkg *packages.Package, file *ast.File) {
+	locator.WalkComments(func(_, absoluteFilename string, node ast.Node, cg *ast.CommentGroup, pkg *packages.Package, _ *ast.File) {
 		pos := pkg.Fset.PositionFor(cg.Pos(), false)
 		fmt.Printf("%s: %T %s\n", absoluteFilename, node, pos)
 	})

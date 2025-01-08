@@ -6,6 +6,7 @@ package locateutil_test
 
 import (
 	"go/ast"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -70,22 +71,22 @@ func TestFunctiosAndMethods(t *testing.T) {
 	for i, tc := range []struct {
 		name, pos string
 	}{
-		{"Fn1", "data/functions.go:7:6"},
-		{"Fn1", "data/functions.go:13:15"},
-		{"Fn2", "data/functions_more.go:3:6"},
+		{"Fn1", filepath.Join("data", "functions.go") + ":7:6"},
+		{"Fn1", filepath.Join("data", "functions.go") + ":13:15"},
+		{"Fn2", filepath.Join("data", "functions_more.go") + ":3:6"},
 		{"M1", "interfaces.go:4:2"},
 		{"M2", "interfaces.go:5:2"},
 		{"M1", "interfaces.go:9:2"},
 		{"M3", "interfaces.go:13:2"},
-		{"M1", "impl/impls.go:5:17"},
-		{"M2", "impl/impls.go:9:17"},
-		{"M3", "impl/impls.go:15:17"},
-		{"M1", "impl/impls.go:22:18"},
-		{"M2", "impl/impls.go:26:18"},
-		{"M3", "impl/impls.go:30:18"},
-		{"M1", "impl/impls.go:37:17"},
-		{"M1", "impl/impls.go:44:3"},
-		{"M2", "impl/impls.go:45:3"},
+		{"M1", filepath.Join("impl", "impls.go") + ":5:17"},
+		{"M2", filepath.Join("impl", "impls.go") + ":9:17"},
+		{"M3", filepath.Join("impl", "impls.go") + ":15:17"},
+		{"M1", filepath.Join("impl", "impls.go") + ":22:18"},
+		{"M2", filepath.Join("impl", "impls.go") + ":26:18"},
+		{"M3", filepath.Join("impl", "impls.go") + ":30:18"},
+		{"M1", filepath.Join("impl", "impls.go") + ":37:17"},
+		{"M1", filepath.Join("impl", "impls.go") + ":44:3"},
+		{"M2", filepath.Join("impl", "impls.go") + ":45:3"},
 	} {
 		if got, want := fns[i].Type.Name(), tc.name; got != want {
 			t.Errorf("%v: got %v, want %v", i, got, want)
@@ -128,11 +129,11 @@ func TestFunctionCalls(t *testing.T) {
 		if got, want := locateutil.FunctionStatements(fn.Decl), expected[i].statements; got != want {
 			t.Errorf("%v: got %v, want %v", i, got, want)
 		}
-		nodes := locateutil.FunctionCalls(fn.Decl, regexp.MustCompile("ioutil.ReadFile"), false)
+		nodes := locateutil.FunctionCalls(fn.Decl, regexp.MustCompile("os.ReadFile"), false)
 		if got, want := len(nodes), expected[i].hasFuncCall; got != want {
 			t.Errorf("%v: got %v, want %v", i, got, want)
 		}
-		nodes = locateutil.FunctionCalls(fn.Decl, regexp.MustCompile("ioutil.Read.*"), true)
+		nodes = locateutil.FunctionCalls(fn.Decl, regexp.MustCompile("os.Read.*"), true)
 		if got, want := len(nodes), expected[i].hasDeferCall; got != want {
 			t.Errorf("%v: got %v, want %v", i, got, want)
 		}

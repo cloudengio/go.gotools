@@ -5,7 +5,6 @@
 package main_test
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -33,7 +32,7 @@ func execit(t *testing.T, bin string, args ...string) string {
 var configFile = filepath.Join("annotators", "testdata", "config.yaml")
 
 func runit(t *testing.T, name, packages string) (output string, tmpdir string) {
-	td, err := ioutil.TempDir("", "goannotate")
+	td, err := os.MkdirTemp("", "goannotate")
 	if err != nil {
 		t.Fatalf("ioutil.TempDir: %v", err)
 	}

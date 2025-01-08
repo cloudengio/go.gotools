@@ -106,7 +106,7 @@ func (lc *AddLogCall) Do(ctx context.Context, root string, pkgs []string) error 
 		file *ast.File,
 		fn *types.Func,
 		decl *ast.FuncDecl,
-		implements []string) {
+		_ []string) {
 		if locateutil.FunctionStatements(decl) < lc.AtLeastStatements {
 			return
 		}
@@ -139,7 +139,7 @@ func (lc *AddLogCall) Do(ctx context.Context, root string, pkgs []string) error 
 
 	locator.WalkFiles(func(filename string,
 		pkg *packages.Package,
-		comments ast.CommentMap,
+		_ ast.CommentMap,
 		file *ast.File,
 		mask locate.HitMask) {
 		if !dirty[filename] || ((mask | locate.HasFunction) == 0) {
@@ -165,7 +165,7 @@ func (lc *AddLogCall) Do(ctx context.Context, root string, pkgs []string) error 
 	return applyEdits(ctx, computeOutputs(root, edits), edits)
 }
 
-func (lc *AddLogCall) alreadyAnnotated(fn *types.Func, decl *ast.FuncDecl, cmap ast.CommentMap, comment string) bool {
+func (lc *AddLogCall) alreadyAnnotated(_ *types.Func, decl *ast.FuncDecl, cmap ast.CommentMap, comment string) bool {
 	if locateutil.FunctionStatements(decl) == 0 {
 		return false
 	}

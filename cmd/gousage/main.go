@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"go/doc"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -120,5 +119,5 @@ func writeGo(filename string, text string) error {
 	if err := writeAllowed(filename); err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filename, formatted, 0622)
+	return os.WriteFile(filename, formatted, 0622)
 }

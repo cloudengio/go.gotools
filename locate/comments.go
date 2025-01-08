@@ -22,7 +22,7 @@ type commentDesc struct {
 	file     *ast.File
 }
 
-func (t *T) findComments(ctx context.Context, exprs []string) error {
+func (t *T) findComments(_ context.Context, exprs []string) error {
 	regexps := make([]*regexp.Regexp, len(exprs))
 	errs := &errors.M{}
 	for i, expr := range exprs {

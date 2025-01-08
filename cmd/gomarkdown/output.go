@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/doc"
+	"go/doc/comment"
 	"go/format"
 	"go/token"
 	"os"
@@ -244,11 +245,13 @@ func (st *outputState) pkgGoDevExampleLink(eg *doc.Example) string {
 
 func (st *outputState) comment(indent, preIndent int, text string) string {
 	out := &strings.Builder{}
-	doc.ToText(out,
-		text,
-		strings.Repeat(" ", indent),
-		strings.Repeat(" ", preIndent),
-		80-indent-preIndent)
+	d := new(doc.Package).Parser().Parse(text)
+	pr := &comment.Printer{
+		TextPrefix:     strings.Repeat(" ", indent),
+		TextCodePrefix: strings.Repeat(" ", preIndent),
+		TextWidth:      80 - indent - preIndent,
+	}
+	out.Write(pr.Text(d))
 	return out.String()
 }
 

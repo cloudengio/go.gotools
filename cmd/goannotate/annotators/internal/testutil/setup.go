@@ -7,7 +7,6 @@ package testutil
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -26,7 +25,7 @@ var (
 
 func initConfig(t *testing.T, v interface{}) {
 	initConfigOnce.Do(func() {
-		buf, err := ioutil.ReadFile(filepath.Join("testdata", "config.yaml"))
+		buf, err := os.ReadFile(filepath.Join("testdata", "config.yaml"))
 		if err != nil {
 			initErr = fmt.Errorf("failed to read config file: %v", err)
 			return
@@ -50,9 +49,9 @@ func SetupAnnotators(t *testing.T) (string, func()) {
 		Annotations []annotators.Spec `yam:"annotations"`
 	}{}
 	initConfig(t, config)
-	td, err := ioutil.TempDir("", "goannotate")
+	td, err := os.MkdirTemp("", "goannotate")
 	if err != nil {
-		t.Fatalf("ioutil.TempDir: %v", err)
+		t.Fatalf("os.MkdirTemp: %v", err)
 	}
 	if len(annotators.Available()) == 0 {
 		t.Fatalf("no annotations found")

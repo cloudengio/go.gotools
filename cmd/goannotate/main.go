@@ -38,7 +38,7 @@ func init() {
 	flag.BoolVar(&verboseFlag, "verbose", false, "display verbose debug info")
 }
 
-func handleDebug(ctx context.Context, cfg debug) (func(), error) {
+func handleDebug(_ context.Context, cfg debug) (func(), error) {
 	var cpu io.WriteCloser
 	if filename := os.ExpandEnv(cfg.CPUProfile); len(filename) > 0 {
 		var err error
