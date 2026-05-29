@@ -12,20 +12,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-/*
-func IsYAMLKey(v yaml.MapItem, k string) (string, bool) {
-	if n, ok := v.Key.(string); ok && n == k {
-		tmp, ok := v.Value.(string)
-		return tmp, ok
-	}
-	return "", false
-}
-*/
-
 var mapSlice reflect.Type
 
 func init() {
-	mapSlice = reflect.TypeOf(yaml.MapSlice{})
+	mapSlice = reflect.TypeFor[yaml.MapSlice]()
 }
 
 func findMapSlice(typ reflect.Type) (int, error) {
@@ -68,7 +58,7 @@ func fieldWithTag(typ reflect.Type, tag string) int {
 func DelegatedYAML(v interface{}, unmarshal func(interface{}) error) error {
 	typ := reflect.TypeOf(v)
 	val := reflect.ValueOf(v)
-	if typ.Kind() == reflect.Ptr {
+	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 		val = reflect.Indirect(val)
 	}

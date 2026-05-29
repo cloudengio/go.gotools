@@ -47,7 +47,7 @@ func Verbosef(format string, args ...interface{}) {
 		return
 	}
 	out := strings.Builder{}
-	out.WriteString(fmt.Sprintf(format, args...))
+	fmt.Fprintf(&out, format, args...)
 	fmt.Print(out.String())
 }
 
