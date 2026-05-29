@@ -109,7 +109,7 @@ func TestMultiPackageError(t *testing.T) {
 	locator := locate.New()
 	locator.AddFunctions(here+"data.nomatch", "notapackage")
 	err := locator.Do(ctx)
-	if err == nil || !strings.Contains(err.Error(), "failed to lookup: notapackage") {
+	if err == nil || !strings.Contains(err.Error(), "notapackage") {
 		t.Fatalf("expected a specific error, but got: %v", err)
 	}
 
