@@ -119,7 +119,7 @@ func processDependencies(inWorkspace map[string]string, workDir string, modFile 
 			}
 
 			if apply {
-				output, err := exec.Command("go", "mod", "edit", "--replace", fmt.Sprintf("%s=%s", modPath, rp)).CombinedOutput()
+				output, err := exec.Command("go", "mod", "edit", "--replace", fmt.Sprintf("%s=%s", modPath, rp)).CombinedOutput() //nolint:gosec // G204 is too restrictive
 				if err != nil {
 					errs = append(errs, fmt.Errorf("error applying replace directive for %s: %w (output: %s)", modPath, err, string(output)))
 				} else {
@@ -243,7 +243,7 @@ func readMatchedDeps(targetPkg string, prefix string) (map[string]bool, string, 
 
 // modulePathFromGoMod reads the module path from the go.mod file in dir.
 func modulePathFromGoMod(dir string) (string, error) {
-	data, err := os.ReadFile(filepath.Join(dir, "go.mod"))
+	data, err := os.ReadFile(filepath.Join(dir, "go.mod")) //nolint:gosec // G304 is too restrictive for this use case
 	if err != nil {
 		return "", fmt.Errorf("read go.mod in %s: %w", dir, err)
 	}

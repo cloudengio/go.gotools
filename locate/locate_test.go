@@ -71,10 +71,10 @@ func compareLocations(t *testing.T, locations []string, prefixes, suffixes []str
 	}
 	sort.Strings(locations)
 	for i, l := range locations {
-		if got, want := l, prefixes[i]; !strings.HasPrefix(got, want) {
+		if got, want := l, prefixes[i]; !strings.HasPrefix(got, want) { //nolint:gosec // G202 false positive
 			t.Errorf("%v: %v doesn't start with %v", loc, got, want)
 		}
-		if got, want := l, suffixes[i]; !strings.HasSuffix(got, want) {
+		if got, want := l, suffixes[i]; !strings.HasSuffix(got, want) { //nolint:gosec // G202 false positive
 			t.Errorf("%v: got %v doesn't have suffix %v", loc, got, want)
 		}
 	}
@@ -83,8 +83,12 @@ func compareLocations(t *testing.T, locations []string, prefixes, suffixes []str
 func compareFiles(t *testing.T, found []string, expected ...string) {
 	loc := errors.Caller(2, 1)
 	sort.Strings(found)
+	if got, want := len(found), len(expected); got != want {
+		t.Errorf("%v: got %v, want %v", loc, got, want)
+		return
+	}
 	for i, f := range found {
-		if got, want := f, expected[i]; !strings.Contains(got, want) {
+		if got, want := f, expected[i]; !strings.Contains(got, want) { //nolint:gosec // G202 false positive
 			t.Errorf("%v: got %v doesn't have suffix %v", loc, got, want)
 		}
 	}
@@ -96,7 +100,7 @@ func compareSlices(t *testing.T, got, want []string) {
 		return
 	}
 	for i := range got {
-		if got, want := got[i], want[i]; !strings.HasSuffix(got, want) {
+		if got, want := got[i], want[i]; !strings.HasSuffix(got, want) { //nolint:gosec // G202 false positive
 			t.Errorf("%v: got %v does not end with %v", errors.Caller(2, 1), got, want)
 			return
 		}
