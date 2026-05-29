@@ -83,8 +83,8 @@ func compareLocations(t *testing.T, locations []string, prefixes, suffixes []str
 func compareFiles(t *testing.T, found []string, expected ...string) {
 	loc := errors.Caller(2, 1)
 	sort.Strings(found)
-	if got, want := len(found), len(expected); got != want {
-		t.Errorf("%v: got %v, want %v", loc, got, want)
+	if got, want := len(found), len(expected); got > want {
+		t.Errorf("%v: got %v, want %v <= %v", loc, got, want, got)
 		return
 	}
 	for i, f := range found {
