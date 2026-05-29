@@ -3,13 +3,13 @@ module cloudeng.io/go
 go 1.25.5
 
 require (
-	cloudeng.io/cmdutil v0.0.0-20241215221655-bd556f44d3de
+	cloudeng.io/cmdutil v0.0.0-20260528213209-7516c0362b93
 	cloudeng.io/errors v0.0.14-0.20260312171538-61fcde6ce278
 	cloudeng.io/path v0.0.10-0.20260114020737-744f6c0f8e64
 	cloudeng.io/sync v0.0.11
 	cloudeng.io/text v0.0.16-0.20260312171538-61fcde6ce278
 	golang.org/x/mod v0.36.0
-	golang.org/x/tools v0.44.0
+	golang.org/x/tools v0.45.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
