@@ -10,9 +10,9 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -58,7 +58,7 @@ func main() {
 
 	// Decode the JSON stream.
 	// (Using a decoder because 'go list ./...' can output multiple JSON objects)
-	matchedDeps, pkg, err := readMatchedDeps(targetPkg, prefix)
+	matchedDeps, moduleRoot, err := readMatchedDeps(targetPkg, prefix)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading matched dependencies: %v\n", err)
 		os.Exit(1)
@@ -97,33 +97,31 @@ func main() {
 		return
 	}
 
-	fmt.Printf("\nWorkspace modules (from %s) containing matched dependencies:\n", filepath.Join(workDir, "go.work"))
-
-	if err := processDependencies(inWorkspace, workDir, modFile, pkg, apply); err != nil {
+	if err := processDependencies(inWorkspace, workDir, modFile, moduleRoot, apply); err != nil {
 		fmt.Fprintf(os.Stderr, "Error processing dependencies: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func processDependencies(inWorkspace map[string]string, workDir string, modFile *modfile.File, pkg Package, apply bool) error {
-
+func processDependencies(inWorkspace map[string]string, workDir string, modFile *modfile.File, moduleRoot string, apply bool) error {
+	var errs []error
 	for modPath, dir := range inWorkspace {
-		isInRepo, err := hasCommonPrefix(dir, workDir, workDir)
+		isInRepo, err := isSubdir(workDir, dir)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error checking paths: %v\n", err)
+			errs = append(errs, fmt.Errorf("error checking paths for %s: %w", dir, err))
 			continue
 		}
 		if isInRepo && modFile.Module.Mod.Path != modPath {
-			rp, err := filepath.Rel(pkg.Root, dir)
+			rp, err := filepath.Rel(moduleRoot, dir)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error computing relative path: %v\n", err)
+				errs = append(errs, fmt.Errorf("error computing relative path for %s: %w", dir, err))
 				continue
 			}
 
 			if apply {
 				output, err := exec.Command("go", "mod", "edit", "--replace", fmt.Sprintf("%s=%s", modPath, rp)).CombinedOutput()
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error applying replace directive: %v\nOutput: %s\n", err, string(output))
+					errs = append(errs, fmt.Errorf("error applying replace directive for %s: %w (output: %s)", modPath, err, string(output)))
 				} else {
 					fmt.Printf("Applied: go mod edit --replace %s=%s\n", modPath, rp)
 				}
@@ -132,7 +130,7 @@ func processDependencies(inWorkspace map[string]string, workDir string, modFile 
 			}
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 func readGomod() (*modfile.File, error) {
@@ -164,13 +162,33 @@ func readGowork() (map[string]string, string, error) {
 		return nil, "", fmt.Errorf("error reading %s: %w", workFile, err)
 	}
 
-	workDir := filepath.Dir(workFile)
-	workModules, err := workspaceModules(workDir, data)
+	workModules, err := workspaceModules(workFile, data)
 	if err != nil {
 		return nil, "", fmt.Errorf("error parsing workspace: %w", err)
 	}
 
-	return workModules, workDir, nil
+	return workModules, filepath.Dir(workFile), nil
+}
+
+// workspaceModules parses a go.work file and returns a map of
+// module path → absolute local directory for each use directive.
+func workspaceModules(workFile string, workData []byte) (map[string]string, error) {
+	workFileParsed, err := modfile.ParseWork(workFile, workData, nil)
+	if err != nil {
+		return nil, err
+	}
+	workDir := filepath.Dir(workFile)
+	modules := make(map[string]string, len(workFileParsed.Use))
+	for _, use := range workFileParsed.Use {
+		abs := filepath.Join(workDir, use.Path)
+		modPath, err := modulePathFromGoMod(abs)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+			continue
+		}
+		modules[modPath] = abs
+	}
+	return modules, nil
 }
 
 // findGoWork returns the path to the active go.work file via 'go env GOWORK'.
@@ -186,7 +204,7 @@ func findGoWork() (string, error) {
 	return path, nil
 }
 
-func readMatchedDeps(targetPkg string, prefix string) (map[string]bool, Package, error) {
+func readMatchedDeps(targetPkg string, prefix string) (map[string]bool, string, error) {
 
 	// Run 'go list -json' to get the package and its transitive dependencies.
 	cmd := exec.Command("go", "list", "-json", targetPkg)
@@ -195,7 +213,7 @@ func readMatchedDeps(targetPkg string, prefix string) (map[string]bool, Package,
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		return nil, Package{}, fmt.Errorf("error running 'go list': %v\n%s", err, stderr.String())
+		return nil, "", fmt.Errorf("error running 'go list': %v\n%s", err, stderr.String())
 	}
 
 	// Decode the JSON stream.
@@ -220,53 +238,7 @@ func readMatchedDeps(targetPkg string, prefix string) (map[string]bool, Package,
 			}
 		}
 	}
-	return matchedDeps, pkg, nil
-}
-
-// workspaceModules parses a go.work file and returns a map of
-// module path → absolute local directory for each use directive.
-func workspaceModules(workDir string, workData []byte) (map[string]string, error) {
-	dirs := useDirs(workData)
-	modules := make(map[string]string, len(dirs))
-	for _, rel := range dirs {
-		abs := filepath.Join(workDir, rel)
-		modPath, err := modulePathFromGoMod(abs)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
-			continue
-		}
-		modules[modPath] = abs
-	}
-	return modules, nil
-}
-
-// useDirs extracts the directory paths from the use directives in a go.work file.
-func useDirs(data []byte) []string {
-	var dirs []string
-	sc := bufio.NewScanner(bytes.NewReader(data))
-	inBlock := false
-	for sc.Scan() {
-		line := strings.TrimSpace(sc.Text())
-		if line == "" || strings.HasPrefix(line, "//") {
-			continue
-		}
-		if line == "use (" {
-			inBlock = true
-			continue
-		}
-		if inBlock {
-			if line == ")" {
-				inBlock = false
-				continue
-			}
-			dirs = append(dirs, line)
-			continue
-		}
-		if strings.HasPrefix(line, "use ") {
-			dirs = append(dirs, strings.TrimPrefix(line, "use "))
-		}
-	}
-	return dirs
+	return matchedDeps, pkg.Root, nil
 }
 
 // modulePathFromGoMod reads the module path from the go.mod file in dir.
@@ -275,42 +247,31 @@ func modulePathFromGoMod(dir string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("read go.mod in %s: %w", dir, err)
 	}
-	for _, line := range strings.Split(string(data), "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "module ") {
-			return strings.Fields(line)[1], nil
-		}
+	f, err := modfile.Parse("go.mod", data, nil)
+	if err != nil {
+		return "", fmt.Errorf("parse go.mod in %s: %w", dir, err)
 	}
-	return "", fmt.Errorf("no module directive in %s/go.mod", dir)
+	if f.Module == nil {
+		return "", fmt.Errorf("no module directive in %s/go.mod", dir)
+	}
+	return f.Module.Mod.Path, nil
 }
 
-func hasCommonPrefix(path1, path2, prefix string) (bool, error) {
-	// 1. Resolve to absolute paths
-	abs1, err := filepath.Abs(path1)
+func isSubdir(parent, child string) (bool, error) {
+	absParent, err := filepath.Abs(parent)
 	if err != nil {
 		return false, err
 	}
-	abs2, err := filepath.Abs(path2)
+	absChild, err := filepath.Abs(child)
 	if err != nil {
 		return false, err
 	}
-	absPrefix, err := filepath.Abs(prefix)
+	rel, err := filepath.Rel(absParent, absChild)
 	if err != nil {
 		return false, err
 	}
-
-	// 3. Ensure the prefix is correctly formatted for directory evaluation
-	if !strings.HasSuffix(absPrefix, string(filepath.Separator)) {
-		absPrefix += string(filepath.Separator)
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return false, nil
 	}
-
-	if !strings.HasSuffix(abs1, string(filepath.Separator)) {
-		abs1 += string(filepath.Separator)
-	}
-	if !strings.HasSuffix(abs2, string(filepath.Separator)) {
-		abs2 += string(filepath.Separator)
-	}
-
-	// 4. Verify if both paths share the prefix directory
-	return strings.HasPrefix(abs1, absPrefix) && strings.HasPrefix(abs2, absPrefix), nil
+	return true, nil
 }
