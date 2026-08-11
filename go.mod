@@ -1,19 +1,19 @@
 module cloudeng.io/go
 
-go 1.25.0
+go 1.26.4
 
 require (
-	cloudeng.io/cmdutil v0.0.0-20241215221655-bd556f44d3de
-	cloudeng.io/errors v0.0.10
+	cloudeng.io/cmdutil v0.0.0-20260811191230-bf36fce425cf
+	cloudeng.io/errors v0.0.14-0.20260312171538-61fcde6ce278
 	cloudeng.io/path v0.0.9
-	cloudeng.io/sync v0.0.8
-	cloudeng.io/text v0.0.11
+	cloudeng.io/sync v0.0.12-0.20260804222138-e9281ed260ba
+	cloudeng.io/text v0.0.16-0.20260624171915-da98fe9dec2b
 	golang.org/x/tools v0.48.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
-	cloudeng.io/debug v0.0.0-20231026032435-4ad1389db593 // indirect
+	cloudeng.io/debug v0.0.0-20260527194618-4cb6d4558850 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
