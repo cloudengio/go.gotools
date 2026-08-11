@@ -90,13 +90,13 @@ func TestLoadExtraMarkdown(t *testing.T) {
 	claudeContent := "# Claude Summary\n\nClaude details here."
 	archContent := "Architecture details."
 
-	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte(readmeContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte(readmeContent), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "claude-summary.md"), []byte(claudeContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "claude-summary.md"), []byte(claudeContent), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "architecture.md"), []byte(archContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "architecture.md"), []byte(archContent), 0600); err != nil {
 		t.Fatal(err)
 	}
 
