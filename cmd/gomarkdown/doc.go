@@ -30,6 +30,10 @@ command line packages. In doing so it employs simple heurestics
 to format package comments.
   - lines with fewer than 5 words that end in a : are treated as headings.
   - all occurrences of the command's name are highlighted.
+
+gomarkdown will also include any other existing .md files in the package's
+directory under an 'External Markdown Files Included Here' section, using
+subheadings that include each file's filename.
 `
 
 func init() {

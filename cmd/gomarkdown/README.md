@@ -1,5 +1,4 @@
 # [cloudeng.io/go/cmd/gomarkdown](https://pkg.go.dev/cloudeng.io/go/cmd/gomarkdown?tab=doc)
-[![CircleCI](https://circleci.com/gh/cloudengio/go.gotools.svg?style=svg)](https://circleci.com/gh/cloudengio/go.gotools) [![Go Report Card](https://goreportcard.com/badge/cloudeng.io/go/cmd/gomarkdown)](https://goreportcard.com/report/cloudeng.io/go/cmd/gomarkdown)
 
 
 # Usage of `gomarkdown`
@@ -23,6 +22,10 @@ comments.
   - lines with fewer than 5 words that end in a : are treated as headings.
   - all occurrences of the command's name are highlighted.
 
+`gomarkdown` will also include any other existing .md files in the package's
+directory under an 'External Markdown Files Included Here' section, using
+subheadings that include each file's filename.
+
 # Command line flags
 
     -circleci string
@@ -37,4 +40,5 @@ comments.
       	name of markdown output file. (default "README.md")
     -overwrite
       	overwrite existing file.
+
 

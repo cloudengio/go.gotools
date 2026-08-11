@@ -101,13 +101,19 @@ func main() {
 		}
 
 		docPkg.Examples = examples
+		dir := dirForPackage(pkg)
+		extraMD, err := loadExtraMarkdown(dir, mdOutputFlag)
+		if err != nil {
+			errs.Append(err)
+			continue
+		}
 		st := newOutputState(docPkg, pkg,
+			extraMarkdown(extraMD),
 			markdownFlavour(markdownFlag),
 			goPkgSite(gopkgSiteFlag),
 			goreportcard(goreportCardFlag),
 			circleciProject(circleciProjectFlag),
 		)
-		dir := dirForPackage(pkg)
 		var mdOutput string
 		if commands[name] {
 			mdOutput, err = st.outputCommand()
