@@ -36,7 +36,7 @@ func main() {
 	flag.Parse()
 
 	if !flags.ExactlyOneSet(commentFlag, functionFlag, interfaceFlag) {
-		cmdutil.Exit("only one of --comments, --functions or --interfaces can be set")
+		cmdutil.Exitf("only one of --comments, --functions or --interfaces can be set")
 	}
 	var err error
 	if len(interfaceFlag) > 0 {
@@ -49,7 +49,7 @@ func main() {
 		err = handleFunctions(ctx, functionFlag, flag.Args())
 	}
 	if err != nil {
-		cmdutil.Exit("error: %v", err)
+		cmdutil.Exitf("error: %v", err)
 	}
 }
 
@@ -58,7 +58,7 @@ func handleInterfaces(ctx context.Context, ifcs string, pkgs []string) error {
 	locator.AddPackages(pkgs...)
 	locator.AddInterfaces(ifcs)
 	if err := locator.Do(ctx); err != nil {
-		cmdutil.Exit("locator.Do failed: %v", err)
+		cmdutil.Exitf("locator.Do failed: %v", err)
 	}
 	locator.WalkFunctions(func(_ string, pkg *packages.Package, _ *ast.File, fn *types.Func, _ *ast.FuncDecl, implements []string) {
 		for _, ifc := range implements {
@@ -74,7 +74,7 @@ func handleComments(ctx context.Context, comments string, pkgs []string) error {
 	locator.AddPackages(pkgs...)
 	locator.AddComments(comments)
 	if err := locator.Do(ctx); err != nil {
-		cmdutil.Exit("locator.Do failed: %v", err)
+		cmdutil.Exitf("locator.Do failed: %v", err)
 	}
 	locator.WalkComments(func(_, absoluteFilename string, node ast.Node, cg *ast.CommentGroup, pkg *packages.Package, _ *ast.File) {
 		pos := pkg.Fset.PositionFor(cg.Pos(), false)
@@ -91,7 +91,7 @@ func handleFunctions(ctx context.Context, functions string, pkgs []string) error
 	locator := locate.New()
 	locator.AddPackages(pkgs...)
 	if err := locator.Do(ctx); err != nil {
-		cmdutil.Exit("locator.Do failed: %v", err)
+		cmdutil.Exitf("locator.Do failed: %v", err)
 	}
 	// option for methods/functions only.
 	locator.WalkPackages(func(pkg *packages.Package) {

@@ -84,7 +84,7 @@ func main() {
 
 	cleanup, err := handleDebug(ctx, config.Debug)
 	if err != nil {
-		cmdutil.Exit("failed to configure debugging/profiling: %v\n", err)
+		cmdutil.Exitf("failed to configure debugging/profiling: %v\n", err)
 	}
 	defer cleanup()
 
@@ -92,22 +92,22 @@ func main() {
 	cmdutil.HandleSignals(cleanup, os.Interrupt, os.Kill)
 
 	if !flags.ExactlyOneSet(annotationFlag) {
-		cmdutil.Exit("--annotation must be specified\n")
+		cmdutil.Exitf("--annotation must be specified\n")
 	}
 	names := bySuffix(annotationFlag)
 	switch len(names) {
 	case 0:
-		cmdutil.Exit("no annotator found for %v\n", annotationFlag)
+		cmdutil.Exitf("no annotator found for %v\n", annotationFlag)
 	case 1:
 	default:
-		cmdutil.Exit("multiple annotators found for %v: %v\n", annotationFlag, strings.Join(names, ", "))
+		cmdutil.Exitf("multiple annotators found for %v: %v\n", annotationFlag, strings.Join(names, ", "))
 	}
 	an := annotators.Lookup(names[0])
 	if an == nil {
-		cmdutil.Exit("unrecognised annotation: %v\n%v\n", annotationFlag, describe(annotators.Available()))
+		cmdutil.Exitf("unrecognised annotation: %v\n%v\n", annotationFlag, describe(annotators.Available()))
 	}
 	if err := an.Do(ctx, writeDirFlag, flag.Args()); err != nil {
-		cmdutil.Exit("%v", err)
+		cmdutil.Exitf("%v", err)
 	}
 }
 

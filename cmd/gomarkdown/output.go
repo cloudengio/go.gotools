@@ -15,7 +15,9 @@ import (
 	"go/token"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"text/template"
 	"unicode"
@@ -104,6 +106,7 @@ type outputOptions struct {
 	goPkgSite       string
 	circleciProject string
 	goreportcard    bool
+	extraMarkdown   string
 }
 
 type outputOption func(o *outputOptions)
@@ -132,6 +135,12 @@ func circleciProject(p string) outputOption {
 	}
 }
 
+func extraMarkdown(md string) outputOption {
+	return func(o *outputOptions) {
+		o.extraMarkdown = md
+	}
+}
+
 func newOutputState(doc *doc.Package, pkg *packages.Package, opts ...outputOption) *outputState {
 	st := &outputState{doc: doc, pkg: pkg}
 	for _, fn := range opts {
@@ -148,6 +157,7 @@ func newOutputState(doc *doc.Package, pkg *packages.Package, opts ...outputOptio
 		"codeStart":        st.codeStart,
 		"codeEnd":          st.codeEnd,
 		"comment":          st.comment,
+		"extraSections":    st.extraSections,
 		"filterGoGenerate": filterGoGenerate,
 		"func":             st.funcDecl,
 		"gocomment":        goComment,
@@ -168,6 +178,10 @@ func newOutputState(doc *doc.Package, pkg *packages.Package, opts ...outputOptio
 		panic(fmt.Sprintf("unsupported go pkg site: %v", st.options.goPkgSite))
 	}
 	return st
+}
+
+func (st *outputState) extraSections() string {
+	return st.options.extraMarkdown
 }
 
 func (st *outputState) badges() string {
@@ -282,6 +296,155 @@ func (st *outputState) outputCommand() (string, error) {
 	return out.String(), err
 }
 
+func loadExtraMarkdown(dir string, ignoreFilename string) (string, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return "", err
+	}
+	var mdFiles []string
+	targetName := filepath.Base(ignoreFilename)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if strings.HasPrefix(name, ".") {
+			continue
+		}
+		if strings.EqualFold(name, targetName) {
+			continue
+		}
+		if strings.HasSuffix(strings.ToLower(name), ".md") {
+			mdFiles = append(mdFiles, name)
+		}
+	}
+	sort.Strings(mdFiles)
+	if len(mdFiles) == 0 {
+		return "", nil
+	}
+
+	var buf strings.Builder
+	buf.WriteString("## External Markdown Files Included Here\n\n")
+	for _, name := range mdFiles {
+		content, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			return "", fmt.Errorf("failed to read extra markdown file %s: %w", name, err)
+		}
+		section := processExtraMarkdown(name, string(content))
+		if section != "" {
+			buf.WriteString(section)
+			buf.WriteString("\n")
+		}
+	}
+	return buf.String(), nil
+}
+
+func isH1(trimmed string) bool {
+	if !strings.HasPrefix(trimmed, "#") {
+		return false
+	}
+	if strings.HasPrefix(trimmed, "##") {
+		return false
+	}
+	return true
+}
+
+func titleFromFilename(filename string) string {
+	name := strings.TrimSuffix(filename, filepath.Ext(filename))
+	name = strings.ReplaceAll(name, "-", " ")
+	name = strings.ReplaceAll(name, "_", " ")
+	words := strings.Fields(name)
+	for i, w := range words {
+		if len(w) > 0 {
+			r, size := utf8.DecodeRuneInString(w)
+			words[i] = string(unicode.ToUpper(r)) + w[size:]
+		}
+	}
+	return strings.Join(words, " ")
+}
+
+func shiftHeading(line string) string {
+	indentLen := len(line) - len(strings.TrimLeft(line, " \t"))
+	indent := line[:indentLen]
+	trimmed := line[indentLen:]
+
+	hashes := 0
+	for hashes < len(trimmed) && trimmed[hashes] == '#' {
+		hashes++
+	}
+	if hashes == 0 {
+		return line
+	}
+
+	newHashes := hashes + 2
+	if hashes == 1 {
+		newHashes = 4
+	}
+	if newHashes > 6 {
+		newHashes = 6
+	}
+
+	return indent + strings.Repeat("#", newHashes) + trimmed[hashes:]
+}
+
+func processExtraMarkdown(filename, content string) string {
+	lines := strings.Split(content, "\n")
+	var (
+		inCodeBlock bool
+		h1Found     bool
+		title       string
+		bodyLines   []string
+	)
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "```") || strings.HasPrefix(trimmed, "~~~") {
+			inCodeBlock = !inCodeBlock
+			bodyLines = append(bodyLines, line)
+			continue
+		}
+
+		if !inCodeBlock && !h1Found && isH1(trimmed) {
+			h1Found = true
+			rawTitle := strings.TrimLeft(trimmed, "#")
+			rawTitle = strings.TrimRight(rawTitle, "#")
+			title = strings.TrimSpace(rawTitle)
+			continue
+		}
+
+		bodyLines = append(bodyLines, line)
+	}
+
+	if title == "" {
+		title = titleFromFilename(filename)
+	}
+
+	subHeader := fmt.Sprintf("### %s (%s)", title, filename)
+
+	inCodeBlock = false
+	var shiftedLines []string
+	for _, line := range bodyLines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "```") || strings.HasPrefix(trimmed, "~~~") {
+			inCodeBlock = !inCodeBlock
+			shiftedLines = append(shiftedLines, line)
+			continue
+		}
+
+		if !inCodeBlock && strings.HasPrefix(trimmed, "#") {
+			shiftedLines = append(shiftedLines, shiftHeading(line))
+		} else {
+			shiftedLines = append(shiftedLines, line)
+		}
+	}
+
+	body := strings.TrimSpace(strings.Join(shiftedLines, "\n"))
+	if body == "" {
+		return fmt.Sprintf("%s\n", subHeader)
+	}
+	return fmt.Sprintf("%s\n\n%s\n", subHeader, body)
+}
+
 var markdownPackageTemplate = `# Package {{packageLink}}
 {{if badges}}{{badges}}
 {{end}}
@@ -382,7 +545,9 @@ import {{.ImportPath}}
 {{range $notes}}- {{.UID}}: {{.Body}}{{end}}
 {{end}}
 {{end}}
-
+{{if extraSections}}
+{{extraSections}}
+{{- end}}
 `
 
 var markdownCommandTemplate = `# {{packageLink}}
@@ -390,4 +555,7 @@ var markdownCommandTemplate = `# {{packageLink}}
 {{end}}
 
 {{comment 0 4 .Doc| guessHeadings 1 5 | highlight .CommandName }}
+{{if extraSections}}
+{{extraSections}}
+{{- end}}
 `

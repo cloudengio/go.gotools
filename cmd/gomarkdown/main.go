@@ -49,14 +49,14 @@ func main() {
 	locator := locate.New(locate.IncludeTests())
 	locator.AddPackages(pkgs...)
 	if err := locator.Do(ctx); err != nil {
-		cmdutil.Exit("failed to run locator: %v", err)
+		cmdutil.Exitf("failed to run locator: %v", err)
 	}
 
 	if err := flags.OneOf(markdownFlag).Validate("github"); err != nil {
-		cmdutil.Exit("%s", err)
+		cmdutil.Exitf("%s", err)
 	}
 	if err := flags.OneOf(gopkgSiteFlag).Validate("pkg.go.dev", "godoc.org"); err != nil {
-		cmdutil.Exit("%s", err)
+		cmdutil.Exitf("%s", err)
 	}
 
 	// Merge the package and any associated test packages into a single
@@ -80,7 +80,7 @@ func main() {
 	})
 
 	if err := errs.Err(); err != nil {
-		cmdutil.Exit("%v", err)
+		cmdutil.Exitf("%v", err)
 	}
 
 	for name, files := range merged {
@@ -101,13 +101,19 @@ func main() {
 		}
 
 		docPkg.Examples = examples
+		dir := dirForPackage(pkg)
+		extraMD, err := loadExtraMarkdown(dir, mdOutputFlag)
+		if err != nil {
+			errs.Append(err)
+			continue
+		}
 		st := newOutputState(docPkg, pkg,
+			extraMarkdown(extraMD),
 			markdownFlavour(markdownFlag),
 			goPkgSite(gopkgSiteFlag),
 			goreportcard(goreportCardFlag),
 			circleciProject(circleciProjectFlag),
 		)
-		dir := dirForPackage(pkg)
 		var mdOutput string
 		if commands[name] {
 			mdOutput, err = st.outputCommand()
@@ -121,7 +127,7 @@ func main() {
 		errs.Append(writeMarkdown(filepath.Join(dir, mdOutputFlag), mdOutput))
 	}
 	if err := errs.Err(); err != nil {
-		cmdutil.Exit("%v", err)
+		cmdutil.Exitf("%v", err)
 	}
 }
 
