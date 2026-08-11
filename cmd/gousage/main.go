@@ -40,7 +40,7 @@ func main() {
 	locator := locate.New()
 	locator.AddPackages(pkgs...)
 	if err := locator.Do(ctx); err != nil {
-		cmdutil.Exit("failed to run locator: %v", err)
+		cmdutil.Exitf("failed to run locator: %v", err)
 	}
 
 	errs := errors.M{}
@@ -70,7 +70,7 @@ func main() {
 
 	})
 	if err := errs.Err(); err != nil {
-		cmdutil.Exit("%v", err)
+		cmdutil.Exitf("%v", err)
 	}
 }
 
