@@ -23,51 +23,74 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-var (
-	markdownFlag        string
-	gopkgSiteFlag       string
-	mdOutputFlag        string
-	overwriteFlag       bool
-	goreportCardFlag    bool
-	circleciProjectFlag string
-)
-
-func init() {
-	flag.StringVar(&markdownFlag, "markdown", "github", "markdown style to use, currently only github is supported.")
-	flag.StringVar(&gopkgSiteFlag, "gopkg", "pkg.go.dev", "link to this site for full godoc and godoc examples")
-	flag.StringVar(&circleciProjectFlag, "circleci", "", "set to the circleci project to insert a circleci build badge")
-	flag.BoolVar(&goreportCardFlag, "goreportcard", false, "insert a link to goreportcard.com")
-	flag.StringVar(&mdOutputFlag, "md-output", "README.md", "name of markdown output file.")
-	flag.BoolVar(&overwriteFlag, "overwrite", false, "overwrite existing file.")
+type cmdlineFlags struct {
+	Markdown     string `cmdline:"markdown,github,'markdown style to use, currently only github is supported.'"`
+	GoPkgSite    string `cmdline:"gopkg,pkg.go.dev,link to this site for full godoc and godoc examples"`
+	CircleCI     string `cmdline:"circleci,,set to the circleci project to insert a circleci build badge"`
+	GoReportCard bool   `cmdline:"goreportcard,false,insert a link to goreportcard.com"`
+	MDOutput     string `cmdline:"md-output,README.md,name of markdown output file."`
+	Overwrite    bool   `cmdline:"overwrite,false,overwrite existing file."`
 }
+
+// validate reports whether the flags that accept one of a fixed set of
+// values were given one of them.
+func (c cmdlineFlags) validate() error {
+	if err := flags.OneOf(c.Markdown).Validate("github"); err != nil {
+		return err
+	}
+	return flags.OneOf(c.GoPkgSite).Validate("pkg.go.dev", "godoc.org")
+}
+
+var cmdFlags cmdlineFlags
 
 func main() {
 	ctx := context.Background()
+	if err := flags.RegisterFlagsInStruct(flag.CommandLine, "cmdline", &cmdFlags, nil, nil); err != nil {
+		cmdutil.Exitf("failed to register flags: %v", err)
+	}
 	flag.Parse()
-	pkgs := flag.Args()
-
-	var docMode doc.Mode
+	if err := cmdFlags.validate(); err != nil {
+		cmdutil.Exitf("%s", err)
+	}
 
 	locator := locate.New(locate.IncludeTests())
-	locator.AddPackages(pkgs...)
+	locator.AddPackages(flag.Args()...)
 	if err := locator.Do(ctx); err != nil {
 		cmdutil.Exitf("failed to run locator: %v", err)
 	}
 
-	if err := flags.OneOf(markdownFlag).Validate("github"); err != nil {
-		cmdutil.Exitf("%s", err)
+	if err := generateMarkdown(locator); err != nil {
+		cmdutil.Exitf("%v", err)
 	}
-	if err := flags.OneOf(gopkgSiteFlag).Validate("pkg.go.dev", "godoc.org"); err != nil {
-		cmdutil.Exitf("%s", err)
-	}
+}
 
-	// Merge the package and any associated test packages into a single
-	// set of ast.Files for use with doc.NewFromFiles.
-	merged := map[string][]*ast.File{}
-	loaded := map[string]*packages.Package{}
-	commands := map[string]bool{}
-
+// generateMarkdown writes the markdown for every package that locator found
+// to the markdown output file in that package's directory. Errors are
+// accumulated so that a failure for one package does not prevent the
+// markdown for the others from being generated.
+func generateMarkdown(locator *locate.T) error {
+	merged, loaded, commands := mergePackages(locator)
 	errs := errors.M{}
+	for name, files := range merged {
+		pkg := loaded[name]
+		text, err := markdownForPackage(pkg, files, commands[name])
+		if err != nil {
+			errs.Append(err)
+			continue
+		}
+		errs.Append(writeMarkdown(filepath.Join(dirForPackage(pkg), cmdFlags.MDOutput), text))
+	}
+	return errs.Err()
+}
+
+// mergePackages merges each package and any associated test package into a
+// single set of ast.Files for use with doc.NewFromFiles. It returns those
+// files, the loaded package and whether the package is a command, each keyed
+// by the package path with any _test suffix removed.
+func mergePackages(locator *locate.T) (merged map[string][]*ast.File, loaded map[string]*packages.Package, commands map[string]bool) {
+	merged = map[string][]*ast.File{}
+	loaded = map[string]*packages.Package{}
+	commands = map[string]bool{}
 	locator.WalkPackages(func(pkg *packages.Package) {
 		if pkg.Name == "main" {
 			commands[pkg.PkgPath] = true
@@ -80,71 +103,89 @@ func main() {
 		baseName := strings.TrimSuffix(pkg.PkgPath, "_test")
 		merged[baseName] = append(merged[baseName], pkg.Syntax...)
 	})
+	return merged, loaded, commands
+}
 
-	if err := errs.Err(); err != nil {
-		cmdutil.Exitf("%v", err)
+// markdownForPackage returns the markdown for a single package, which is
+// formatted as a command if isCommand is set.
+func markdownForPackage(pkg *packages.Package, files []*ast.File, isCommand bool) (string, error) {
+	var docMode doc.Mode
+	docPkg, err := packageDoc(pkg, files, docMode)
+	if err != nil {
+		return "", err
 	}
+	// Merge all of the examples into the single package level Examples
+	// since the markdown will list all of the examples in one section.
+	docPkg.Examples = allExamples(docPkg)
 
-	for name, files := range merged {
-		pkg := loaded[name]
-		docPkg, err := doc.NewFromFiles(pkg.Fset, files, pkg.PkgPath, docMode)
-		if err != nil && len(pkg.GoFiles) > 0 {
-			// If doc.NewFromFiles fails (e.g. cgo files in Go build cache without .go extension),
-			// fall back to parsing the original Go source files directly.
-			fallbackFset := token.NewFileSet()
-			var fallbackFiles []*ast.File
-			for _, file := range pkg.GoFiles {
-				if parsed, parseErr := parser.ParseFile(fallbackFset, file, nil, parser.ParseComments); parseErr == nil {
-					fallbackFiles = append(fallbackFiles, parsed)
-				}
-			}
-			if len(fallbackFiles) > 0 {
-				docPkg, err = doc.NewFromFiles(fallbackFset, fallbackFiles, pkg.PkgPath, docMode)
-			}
-		}
-		if err != nil {
-			errs.Append(fmt.Errorf("failed to create ast.Package for %v: %v", pkg.PkgPath, err))
-			continue
-		}
-		// Merge all of the examples into the single package level Examples
-		// since the markdown will list all of the examples in one section.
-		examples := docPkg.Examples
-		for _, fneg := range docPkg.Funcs {
-			examples = append(examples, fneg.Examples...)
-		}
-		for _, tyeg := range docPkg.Types {
-			examples = append(examples, tyeg.Examples...)
-		}
+	dir := dirForPackage(pkg)
+	extraMD, err := loadExtraMarkdown(dir, cmdFlags.MDOutput)
+	if err != nil {
+		return "", err
+	}
+	st := newOutputState(docPkg, pkg,
+		extraMarkdown(extraMD),
+		markdownFlavour(cmdFlags.Markdown),
+		goPkgSite(cmdFlags.GoPkgSite),
+		goreportcard(cmdFlags.GoReportCard),
+		circleciProject(cmdFlags.CircleCI),
+	)
+	if isCommand {
+		return st.outputCommand()
+	}
+	return st.outputPackage()
+}
 
-		docPkg.Examples = examples
-		dir := dirForPackage(pkg)
-		extraMD, err := loadExtraMarkdown(dir, mdOutputFlag)
-		if err != nil {
-			errs.Append(err)
-			continue
+// packageDoc returns the documentation for pkg as parsed into files, falling
+// back to fallbackPackageDoc if that cannot be determined.
+func packageDoc(pkg *packages.Package, files []*ast.File, mode doc.Mode) (*doc.Package, error) {
+	docPkg, err := doc.NewFromFiles(pkg.Fset, files, pkg.PkgPath, mode)
+	if err != nil {
+		if fallback, ferr := fallbackPackageDoc(pkg, mode); fallback != nil || ferr != nil {
+			docPkg, err = fallback, ferr
 		}
-		st := newOutputState(docPkg, pkg,
-			extraMarkdown(extraMD),
-			markdownFlavour(markdownFlag),
-			goPkgSite(gopkgSiteFlag),
-			goreportcard(goreportCardFlag),
-			circleciProject(circleciProjectFlag),
-		)
-		var mdOutput string
-		if commands[name] {
-			mdOutput, err = st.outputCommand()
-		} else {
-			mdOutput, err = st.outputPackage()
-		}
-		if err != nil {
-			errs.Append(err)
-			continue
-		}
-		errs.Append(writeMarkdown(filepath.Join(dir, mdOutputFlag), mdOutput))
 	}
-	if err := errs.Err(); err != nil {
-		cmdutil.Exitf("%v", err)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create ast.Package for %v: %v", pkg.PkgPath, err)
 	}
+	return docPkg, nil
+}
+
+// fallbackPackageDoc determines a package's documentation by parsing its
+// original Go source files directly. It is used when doc.NewFromFiles fails
+// for the files the package was loaded from, eg. for cgo files in the go
+// build cache, which have no .go extension. It returns nil, nil if there are
+// no source files to fall back to.
+func fallbackPackageDoc(pkg *packages.Package, mode doc.Mode) (*doc.Package, error) {
+	if len(pkg.GoFiles) == 0 {
+		return nil, nil
+	}
+	fset := token.NewFileSet()
+	var files []*ast.File
+	for _, file := range pkg.GoFiles {
+		// Files that cannot be parsed are skipped rather than reported, the
+		// aim being to recover as much documentation as possible.
+		if parsed, err := parser.ParseFile(fset, file, nil, parser.ParseComments); err == nil {
+			files = append(files, parsed)
+		}
+	}
+	if len(files) == 0 {
+		return nil, nil
+	}
+	return doc.NewFromFiles(fset, files, pkg.PkgPath, mode)
+}
+
+// allExamples returns every example in docPkg: those at package level and
+// those associated with its functions and types.
+func allExamples(docPkg *doc.Package) []*doc.Example {
+	examples := docPkg.Examples
+	for _, fn := range docPkg.Funcs {
+		examples = append(examples, fn.Examples...)
+	}
+	for _, typ := range docPkg.Types {
+		examples = append(examples, typ.Examples...)
+	}
+	return examples
 }
 
 func dirForPackage(pkg *packages.Package) string {
@@ -158,24 +199,28 @@ func dirForPackage(pkg *packages.Package) string {
 	return filepath.Dir(files[0])
 }
 
-func writeAllowed(filename string) error {
-	if overwriteFlag {
-		return nil
-	}
-	_, err := os.Stat(filename)
-	if err == nil {
-		return fmt.Errorf("cannot overwite existing file: %v", filename)
-	}
-	if !os.IsNotExist(err) {
+// writeMarkdown writes text to filename, but only if it differs from that
+// file's current contents, and prints the name of each file it writes. The
+// markdown for every package is regenerated on every run and most of it is
+// typically unchanged, so this reports just those files that were updated.
+// An existing file whose contents would change is overwritten only if
+// --overwrite is specified.
+func writeMarkdown(filename, text string) error {
+	existing, err := os.ReadFile(filename)
+	switch {
+	case err == nil:
+		if string(existing) == text {
+			return nil
+		}
+		if !cmdFlags.Overwrite {
+			return fmt.Errorf("cannot overwrite existing file: %v", filename)
+		}
+	case !os.IsNotExist(err):
 		return fmt.Errorf("unexpected error for %v: %v", filename, err)
 	}
-	return nil
-}
-
-func writeMarkdown(filename string, text string) error {
-	fmt.Printf("writing: %v\n", filename)
-	if err := writeAllowed(filename); err != nil {
+	if err := os.WriteFile(filename, []byte(text), 0600); err != nil {
 		return err
 	}
-	return os.WriteFile(filename, []byte(text), 0600)
+	fmt.Printf("updated: %v\n", filename)
+	return nil
 }
