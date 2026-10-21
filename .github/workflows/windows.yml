@@ -10,12 +10,12 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.26.x]
+        go-version: [1.27.x]
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go-version }}
 

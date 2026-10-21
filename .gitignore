@@ -13,3 +13,12 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+
+go.work
+code_review.md
+.gograph/
+.agents/
+CLAUDE.md
+GEMINI.md
+.mcp.json

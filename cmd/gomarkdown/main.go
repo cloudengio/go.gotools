@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"go/ast"
 	"go/doc"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
@@ -86,9 +88,23 @@ func main() {
 	for name, files := range merged {
 		pkg := loaded[name]
 		docPkg, err := doc.NewFromFiles(pkg.Fset, files, pkg.PkgPath, docMode)
+		if err != nil && len(pkg.GoFiles) > 0 {
+			// If doc.NewFromFiles fails (e.g. cgo files in Go build cache without .go extension),
+			// fall back to parsing the original Go source files directly.
+			fallbackFset := token.NewFileSet()
+			var fallbackFiles []*ast.File
+			for _, file := range pkg.GoFiles {
+				if parsed, parseErr := parser.ParseFile(fallbackFset, file, nil, parser.ParseComments); parseErr == nil {
+					fallbackFiles = append(fallbackFiles, parsed)
+				}
+			}
+			if len(fallbackFiles) > 0 {
+				docPkg, err = doc.NewFromFiles(fallbackFset, fallbackFiles, pkg.PkgPath, docMode)
+			}
+		}
 		if err != nil {
 			errs.Append(fmt.Errorf("failed to create ast.Package for %v: %v", pkg.PkgPath, err))
-			return
+			continue
 		}
 		// Merge all of the examples into the single package level Examples
 		// since the markdown will list all of the examples in one section.
@@ -132,10 +148,14 @@ func main() {
 }
 
 func dirForPackage(pkg *packages.Package) string {
-	if len(pkg.CompiledGoFiles) == 0 {
+	files := pkg.GoFiles
+	if len(files) == 0 {
+		files = pkg.CompiledGoFiles
+	}
+	if len(files) == 0 {
 		panic(fmt.Sprintf("no source files for %v\n", pkg.PkgPath))
 	}
-	return filepath.Dir(pkg.CompiledGoFiles[0])
+	return filepath.Dir(files[0])
 }
 
 func writeAllowed(filename string) error {
