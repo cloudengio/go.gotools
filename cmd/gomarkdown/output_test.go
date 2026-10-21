@@ -43,6 +43,9 @@ func TestShiftHeading(t *testing.T) {
 		{"###### MaxDepth", "###### MaxDepth"},
 		{"  ## Indented", "  #### Indented"},
 		{"Not a heading", "Not a heading"},
+		{"#hashtag", "#hashtag"},
+		{"#include <stdio.h>", "#include <stdio.h>"},
+		{"####### TooManyHashes", "####### TooManyHashes"},
 	}
 
 	for _, tt := range tests {
@@ -60,6 +63,26 @@ func TestProcessExtraMarkdown_WithH1(t *testing.T) {
 
 	if strings.TrimSpace(got) != strings.TrimSpace(expected) {
 		t.Errorf("processExtraMarkdown with H1 failed.\nGot:\n%s\nWant:\n%s", got, expected)
+	}
+}
+
+func TestProcessExtraMarkdown_SetextH1(t *testing.T) {
+	content := "My Custom Document Title\n========================\n\nIntroductory description.\n\n## Section 1\nDetails 1.\n"
+	got := processExtraMarkdown("setext.md", content)
+	expected := "### My Custom Document Title (setext.md)\n\nIntroductory description.\n\n#### Section 1\nDetails 1."
+
+	if strings.TrimSpace(got) != strings.TrimSpace(expected) {
+		t.Errorf("processExtraMarkdown with Setext H1 failed.\nGot:\n%s\nWant:\n%s", got, expected)
+	}
+}
+
+func TestProcessExtraMarkdown_ClosingHashes(t *testing.T) {
+	content := "# Introduction to C# ###\n\nThis guide covers C# programming.\n"
+	got := processExtraMarkdown("csharp.md", content)
+	expected := "### Introduction to C# (csharp.md)\n\nThis guide covers C# programming."
+
+	if strings.TrimSpace(got) != strings.TrimSpace(expected) {
+		t.Errorf("processExtraMarkdown with closing hashes failed.\nGot:\n%s\nWant:\n%s", got, expected)
 	}
 }
 
@@ -126,5 +149,36 @@ func TestLoadExtraMarkdown(t *testing.T) {
 	claudeIdx := strings.Index(got, "### Claude Summary (claude-summary.md)")
 	if archIdx > claudeIdx {
 		t.Errorf("Expected architecture section before claude section, got indices %d, %d", archIdx, claudeIdx)
+	}
+}
+
+func TestLoadExtraMarkdown_Security(t *testing.T) {
+	dir := t.TempDir()
+
+	// 1. Create a symlink pointing to an external file
+	targetFile := filepath.Join(t.TempDir(), "external-secret.md")
+	if err := os.WriteFile(targetFile, []byte("# Secret Content"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	symlinkPath := filepath.Join(dir, "symlink.md")
+	if err := os.Symlink(targetFile, symlinkPath); err != nil {
+		t.Logf("Symlinks not supported on this OS/env, skipping symlink test: %v", err)
+	}
+
+	// 2. Create a normal markdown file
+	if err := os.WriteFile(filepath.Join(dir, "normal.md"), []byte("# Normal Content"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := loadExtraMarkdown(dir, "README.md")
+	if err != nil {
+		t.Fatalf("loadExtraMarkdown failed: %v", err)
+	}
+
+	if strings.Contains(got, "Secret Content") {
+		t.Errorf("loadExtraMarkdown should skip symlinked files, but included secret content:\n%s", got)
+	}
+	if !strings.Contains(got, "Normal Content") {
+		t.Errorf("loadExtraMarkdown should include normal regular files:\n%s", got)
 	}
 }

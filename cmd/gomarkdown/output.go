@@ -296,6 +296,8 @@ func (st *outputState) outputCommand() (string, error) {
 	return out.String(), err
 }
 
+const maxExtraMarkdownFileSize = 5 * 1024 * 1024 // 5 MB limit
+
 func loadExtraMarkdown(dir string, ignoreFilename string) (string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -304,7 +306,8 @@ func loadExtraMarkdown(dir string, ignoreFilename string) (string, error) {
 	var mdFiles []string
 	targetName := filepath.Base(ignoreFilename)
 	for _, entry := range entries {
-		if entry.IsDir() {
+		// Skip directories, symlinks, and non-regular files to avoid symlink traversal attacks.
+		if entry.IsDir() || entry.Type()&os.ModeSymlink != 0 || !entry.Type().IsRegular() {
 			continue
 		}
 		name := entry.Name()
@@ -315,6 +318,10 @@ func loadExtraMarkdown(dir string, ignoreFilename string) (string, error) {
 			continue
 		}
 		if strings.HasSuffix(strings.ToLower(name), ".md") {
+			info, err := entry.Info()
+			if err != nil || info.Size() > maxExtraMarkdownFileSize {
+				continue
+			}
 			mdFiles = append(mdFiles, name)
 		}
 	}
@@ -339,12 +346,93 @@ func loadExtraMarkdown(dir string, ignoreFilename string) (string, error) {
 	return buf.String(), nil
 }
 
-func isH1(trimmed string) bool {
+type codeFence struct {
+	char   byte
+	length int
+}
+
+func parseFence(line string) (codeFence, bool) {
+	indentLen := len(line) - len(strings.TrimLeft(line, " \t"))
+	if indentLen > 3 {
+		return codeFence{}, false
+	}
+	trimmed := line[indentLen:]
+	if len(trimmed) < 3 {
+		return codeFence{}, false
+	}
+	ch := trimmed[0]
+	if ch != '`' && ch != '~' {
+		return codeFence{}, false
+	}
+	n := 0
+	for n < len(trimmed) && trimmed[n] == ch {
+		n++
+	}
+	if n < 3 {
+		return codeFence{}, false
+	}
+	if ch == '`' && strings.ContainsRune(trimmed[n:], '`') {
+		return codeFence{}, false
+	}
+	return codeFence{char: ch, length: n}, true
+}
+
+func parseATXHeading(line string) (level int, title string, ok bool) {
+	indentLen := len(line) - len(strings.TrimLeft(line, " \t"))
+	if indentLen > 3 {
+		return 0, "", false
+	}
+	trimmed := line[indentLen:]
 	if !strings.HasPrefix(trimmed, "#") {
+		return 0, "", false
+	}
+	hashes := 0
+	for hashes < len(trimmed) && trimmed[hashes] == '#' {
+		hashes++
+	}
+	if hashes > 6 {
+		return 0, "", false
+	}
+	if hashes < len(trimmed) && trimmed[hashes] != ' ' && trimmed[hashes] != '\t' {
+		return 0, "", false
+	}
+
+	raw := strings.TrimSpace(trimmed[hashes:])
+	raw = stripATXClosingHashes(raw)
+	return hashes, raw, true
+}
+
+func stripATXClosingHashes(raw string) string {
+	trimmed := strings.TrimRight(raw, " \t")
+	if !strings.HasSuffix(trimmed, "#") {
+		return raw
+	}
+	lastNonHash := len(trimmed) - 1
+	for lastNonHash >= 0 && trimmed[lastNonHash] == '#' {
+		lastNonHash--
+	}
+	if lastNonHash < 0 {
+		return ""
+	}
+	if trimmed[lastNonHash] == ' ' || trimmed[lastNonHash] == '\t' {
+		return strings.TrimSpace(trimmed[:lastNonHash+1])
+	}
+	return raw
+}
+
+func isSetextUnderline(line string) bool {
+	indentLen := len(line) - len(strings.TrimLeft(line, " \t"))
+	if indentLen > 3 {
 		return false
 	}
-	if strings.HasPrefix(trimmed, "##") {
+	trimmed := strings.TrimSpace(line[indentLen:])
+	if len(trimmed) == 0 {
 		return false
+	}
+	for i := 0; i < len(trimmed); i++ {
+		if trimmed[i] != '=' {
+			return false
+		}
 	}
 	return true
 }
@@ -364,85 +452,138 @@ func titleFromFilename(filename string) string {
 }
 
 func shiftHeading(line string) string {
-	indentLen := len(line) - len(strings.TrimLeft(line, " \t"))
-	indent := line[:indentLen]
-	trimmed := line[indentLen:]
-
-	hashes := 0
-	for hashes < len(trimmed) && trimmed[hashes] == '#' {
-		hashes++
-	}
-	if hashes == 0 {
+	level, title, ok := parseATXHeading(line)
+	if !ok {
 		return line
 	}
 
-	newHashes := hashes + 2
-	if hashes == 1 {
-		newHashes = 4
+	newLevel := level + 2
+	if level == 1 {
+		newLevel = 4
 	}
-	if newHashes > 6 {
-		newHashes = 6
+	if newLevel > 6 {
+		newLevel = 6
 	}
 
-	return indent + strings.Repeat("#", newHashes) + trimmed[hashes:]
+	indentLen := len(line) - len(strings.TrimLeft(line, " \t"))
+	indent := line[:indentLen]
+
+	if title == "" {
+		return indent + strings.Repeat("#", newLevel)
+	}
+	return indent + strings.Repeat("#", newLevel) + " " + title
 }
 
 func processExtraMarkdown(filename, content string) string {
-	lines := strings.Split(content, "\n")
-	var (
-		inCodeBlock bool
-		h1Found     bool
-		title       string
-		bodyLines   []string
-	)
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "```") || strings.HasPrefix(trimmed, "~~~") {
-			inCodeBlock = !inCodeBlock
-			bodyLines = append(bodyLines, line)
-			continue
-		}
-
-		if !inCodeBlock && !h1Found && isH1(trimmed) {
-			h1Found = true
-			rawTitle := strings.TrimLeft(trimmed, "#")
-			rawTitle = strings.TrimRight(rawTitle, "#")
-			title = strings.TrimSpace(rawTitle)
-			continue
-		}
-
-		bodyLines = append(bodyLines, line)
-	}
+	lines, title, h1LineIdx, setextIdx := extractTitleAndLines(content)
 
 	if title == "" {
 		title = titleFromFilename(filename)
 	}
 
 	subHeader := fmt.Sprintf("### %s (%s)", title, filename)
+	body := buildShiftedBody(lines, h1LineIdx, setextIdx)
 
-	inCodeBlock = false
-	var shiftedLines []string
-	for _, line := range bodyLines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "```") || strings.HasPrefix(trimmed, "~~~") {
-			inCodeBlock = !inCodeBlock
-			shiftedLines = append(shiftedLines, line)
-			continue
-		}
-
-		if !inCodeBlock && strings.HasPrefix(trimmed, "#") {
-			shiftedLines = append(shiftedLines, shiftHeading(line))
-		} else {
-			shiftedLines = append(shiftedLines, line)
-		}
-	}
-
-	body := strings.TrimSpace(strings.Join(shiftedLines, "\n"))
 	if body == "" {
 		return fmt.Sprintf("%s\n", subHeader)
 	}
 	return fmt.Sprintf("%s\n\n%s\n", subHeader, body)
+}
+
+func extractTitleAndLines(content string) (lines []string, title string, h1LineIdx, setextIdx int) {
+	scanner := bufio.NewScanner(strings.NewReader(content))
+	var (
+		inCodeBlock bool
+		activeFence codeFence
+		h1Found     bool
+	)
+	h1LineIdx = -1
+	setextIdx = -1
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		lines = append(lines, line)
+		idx := len(lines) - 1
+
+		if fence, ok := parseFence(line); ok {
+			if !inCodeBlock {
+				inCodeBlock = true
+				activeFence = fence
+			} else if fence.char == activeFence.char && fence.length >= activeFence.length {
+				inCodeBlock = false
+				activeFence = codeFence{}
+			}
+			continue
+		}
+
+		if !inCodeBlock && !h1Found {
+			if level, parsedTitle, ok := parseATXHeading(line); ok && level == 1 {
+				h1Found = true
+				title = parsedTitle
+				h1LineIdx = idx
+				continue
+			}
+
+			if idx > 0 && isSetextUnderline(line) {
+				prevLine := strings.TrimSpace(lines[idx-1])
+				if prevLine != "" && !strings.HasPrefix(prevLine, "#") {
+					h1Found = true
+					title = prevLine
+					h1LineIdx = idx - 1
+					setextIdx = idx
+					continue
+				}
+			}
+		}
+	}
+	return
+}
+
+func buildShiftedBody(lines []string, h1LineIdx, setextIdx int) string {
+	var (
+		inCodeBlock    bool
+		activeFence    codeFence
+		hasBodyContent bool
+		bodyBuf        strings.Builder
+	)
+
+	for i, line := range lines {
+		if i == h1LineIdx || i == setextIdx {
+			continue
+		}
+
+		if fence, ok := parseFence(line); ok {
+			if !inCodeBlock {
+				inCodeBlock = true
+				activeFence = fence
+			} else if fence.char == activeFence.char && fence.length >= activeFence.length {
+				inCodeBlock = false
+				activeFence = codeFence{}
+			}
+			bodyBuf.WriteString(line)
+			bodyBuf.WriteString("\n")
+			hasBodyContent = true
+			continue
+		}
+
+		if !inCodeBlock {
+			shifted := shiftHeading(line)
+			bodyBuf.WriteString(shifted)
+			bodyBuf.WriteString("\n")
+		} else {
+			bodyBuf.WriteString(line)
+			bodyBuf.WriteString("\n")
+		}
+		if strings.TrimSpace(line) != "" {
+			hasBodyContent = true
+		}
+	}
+
+	body := strings.TrimSpace(bodyBuf.String())
+	if !hasBodyContent {
+		return ""
+	}
+	return body
 }
 
 var markdownPackageTemplate = `# Package {{packageLink}}
