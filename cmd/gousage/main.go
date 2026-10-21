@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -15,23 +16,24 @@ import (
 	"strings"
 
 	"cloudeng.io/cmdutil"
+	"cloudeng.io/cmdutil/flags"
 	"cloudeng.io/errors"
 	"cloudeng.io/go/locate"
 	"golang.org/x/tools/go/packages"
 )
 
-var (
-	overwriteFlag bool
-	goOutputFlag  string
-)
-
-func init() {
-	flag.BoolVar(&overwriteFlag, "overwrite", false, "overwrite existing file.")
-	flag.StringVar(&goOutputFlag, "go-output", "cmdusage.go", "name of generated go file.")
+type cmdlineFlags struct {
+	GoOutput  string `cmdline:"go-output,cmdusage.go,name of generated go file."`
+	Overwrite bool   `cmdline:"overwrite,false,overwrite existing file."`
 }
+
+var cmdFlags cmdlineFlags
 
 func main() {
 	ctx := context.Background()
+	if err := flags.RegisterFlagsInStruct(flag.CommandLine, "cmdline", &cmdFlags, nil, nil); err != nil {
+		cmdutil.Exitf("failed to register flags: %v", err)
+	}
 	flag.Parse()
 	pkgs := flag.Args()
 
@@ -66,7 +68,7 @@ func main() {
 			errs.Append(err)
 			return
 		}
-		errs.Append(writeGo(filepath.Join(dir, goOutputFlag), out))
+		errs.Append(writeGo(filepath.Join(dir, cmdFlags.GoOutput), out))
 
 	})
 	if err := errs.Err(); err != nil {
@@ -94,20 +96,12 @@ func helpText(ctx context.Context, pkg string) (string, error) {
 	return string(out), nil
 }
 
-func writeAllowed(filename string) error {
-	if overwriteFlag {
-		return nil
-	}
-	_, err := os.Stat(filename)
-	if err == nil {
-		return fmt.Errorf("cannot overwite existing file: %v", filename)
-	}
-	if !os.IsNotExist(err) {
-		return fmt.Errorf("unexpected error for %v: %v", filename, err)
-	}
-	return nil
-}
-
+// writeGo formats text with gofmt and writes it to filename, but only if it
+// differs from that file's current contents, and prints the name of each file
+// it writes. The usage is regenerated for every command on every run and most
+// of it is typically unchanged, so this reports just those files that were
+// updated. An existing file whose contents would change is overwritten only
+// if --overwrite is specified.
 func writeGo(filename string, text string) error {
 	cmd := exec.Command("gofmt")
 	cmd.Stdin = strings.NewReader(text)
@@ -115,9 +109,21 @@ func writeGo(filename string, text string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("writing: %v\n", filename)
-	if err := writeAllowed(filename); err != nil {
+	existing, err := os.ReadFile(filename)
+	switch {
+	case err == nil:
+		if bytes.Equal(existing, formatted) {
+			return nil
+		}
+		if !cmdFlags.Overwrite {
+			return fmt.Errorf("cannot overwrite existing file: %v", filename)
+		}
+	case !os.IsNotExist(err):
+		return fmt.Errorf("unexpected error for %v: %v", filename, err)
+	}
+	if err := os.WriteFile(filename, formatted, 0600); err != nil {
 		return err
 	}
-	return os.WriteFile(filename, formatted, 0600)
+	fmt.Printf("updated: %v\n", filename)
+	return nil
 }
