@@ -5,11 +5,113 @@
 package main
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"golang.org/x/tools/go/packages"
 )
+
+// TestFallbackPackageDocFormatting tests that the declarations returned by
+// fallbackPackageDoc are formatted using the FileSet that they were parsed
+// into, rather than that of the package, in which their positions refer to
+// unrelated locations.
+func TestFallbackPackageDocFormatting(t *testing.T) {
+	src := `package p
+
+// R is a struct.
+type R struct {
+	ID  uint64
+	Seq uint64
+	// From is a doc comment
+	// on two lines.
+	From  uint64
+	Frame []byte
+}
+
+// Q is a struct.
+type Q struct {
+	// Wait is a doc comment.
+	Wait int
+}
+
+const (
+	// A is a constant.
+	A = 1
+	// B is a constant.
+	B = 2
+)
+
+// F is a function.
+func F(a int) int {
+	return a
+}
+`
+	filename := filepath.Join(t.TempDir(), "p.go")
+	if err := os.WriteFile(filename, []byte(src), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	// As for a cgo file in the go build cache, the file that the package was
+	// loaded from has no .go extension, so that doc.NewFromFiles fails for it.
+	// It is a single line, so any position that is incorrectly resolved using
+	// the package's FileSet is on that line, which reliably breaks the
+	// placement of comments.
+	fset := token.NewFileSet()
+	loadedSrc := "package p // " + strings.Repeat("x", len(src)) + "\n"
+	loaded, err := parser.ParseFile(fset, "generated", loadedSrc, parser.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg := &packages.Package{
+		PkgPath: "example.com/p",
+		Fset:    fset,
+		GoFiles: []string{filename},
+	}
+
+	docPkg, docFset, err := packageDoc(pkg, []*ast.File{loaded}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if docFset == fset {
+		t.Errorf("expected the fallback's FileSet, not that of the package")
+	}
+
+	got, err := newOutputState(docPkg, pkg, docFset, goPkgSite("pkg.go.dev")).outputPackage()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"type R struct {\n\tID  uint64\n\tSeq uint64\n\t// From is a doc comment\n\t// on two lines.\n\tFrom  uint64\n\tFrame []byte\n}\n",
+		"type Q struct {\n\t// Wait is a doc comment.\n\tWait int\n}\n",
+		"// A is a constant.\nA = 1\n// B is a constant.\nB = 2\n",
+		"func F(a int) int\n",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("output does not contain:\n%s\ngot:\n%s", want, got)
+		}
+	}
+}
+
+func TestPackageDocFileSet(t *testing.T) {
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "p.go", "package p\n", parser.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg := &packages.Package{PkgPath: "example.com/p", Fset: fset}
+	_, docFset, err := packageDoc(pkg, []*ast.File{file}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if docFset != fset {
+		t.Errorf("expected the package's FileSet when no fallback is needed")
+	}
+}
 
 func TestTitleFromFilename(t *testing.T) {
 	tests := []struct {
