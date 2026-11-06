@@ -88,12 +88,57 @@ func F(a int) int {
 	for _, want := range []string{
 		"type R struct {\n\tID  uint64\n\tSeq uint64\n\t// From is a doc comment\n\t// on two lines.\n\tFrom  uint64\n\tFrame []byte\n}\n",
 		"type Q struct {\n\t// Wait is a doc comment.\n\tWait int\n}\n",
-		"// A is a constant.\nA = 1\n// B is a constant.\nB = 2\n",
+		"const (\n\t// A is a constant.\n\tA = 1\n\t// B is a constant.\n\tB = 2\n)\n",
 		"func F(a int) int\n",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("output does not contain:\n%s\ngot:\n%s", want, got)
 		}
+	}
+}
+
+func TestValueDeclConsts(t *testing.T) {
+	for _, tc := range []struct {
+		name, src, want string
+	}{
+		{"line", "// A is a constant.\nconst A = 1\n",
+			"const A = 1"},
+		{"multiple names on a line", "const A, B = 1, 2\n",
+			"const A, B = 1, 2"},
+		{"group of one", "const (\n\t// A is a constant.\n\tA = 1 // trailing\n)\n",
+			"// A is a constant.\nconst A = 1 // trailing"},
+		{"group of two", "const (\n\t// A is a constant.\n\tA = 1\n\tB = 2\n)\n",
+			"const (\n\t// A is a constant.\n\tA = 1\n\tB = 2\n)"},
+		{"group of three", "const (\n\tA = 1\n\tB = 2\n\tC = 3\n)\n",
+			"const (\n\tA = 1\n\tB = 2\n\tC = 3\n)"},
+		{"unexported removed leaving one", "const (\n\t// A is a constant.\n\tA = 1\n\t// b is hidden.\n\tb = 2\n)\n",
+			"// A is a constant.\nconst A = 1"},
+		{"unexported removed leaving two", "const (\n\tA = 1\n\tb = 2\n\tC = 3\n)\n",
+			"const (\n\tA = 1\n\n\tC = 3\n)"},
+		{"iota", "const (\n\tA = iota\n\tB\n)\n",
+			"const (\n\tA = iota\n\tB\n)"},
+		{"iota without a value left", "const (\n\ta = iota\n\tB\n)\n",
+			"const (\n\tB\n)"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fset := token.NewFileSet()
+			file, err := parser.ParseFile(fset, "p.go", "package p\n\n"+tc.src, parser.ParseComments)
+			if err != nil {
+				t.Fatal(err)
+			}
+			pkg := &packages.Package{PkgPath: "example.com/p", Fset: fset}
+			docPkg, docFset, err := packageDoc(pkg, []*ast.File{file}, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got, want := len(docPkg.Consts), 1; got != want {
+				t.Fatalf("got %v const declarations, want %v", got, want)
+			}
+			st := newOutputState(docPkg, pkg, docFset, goPkgSite("pkg.go.dev"))
+			if got := st.valueDecl(docPkg.Consts[0].Decl); got != tc.want {
+				t.Errorf("got:\n%s\nwant:\n%s", got, tc.want)
+			}
+		})
 	}
 }
 
