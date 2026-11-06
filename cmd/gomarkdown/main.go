@@ -110,7 +110,7 @@ func mergePackages(locator *locate.T) (merged map[string][]*ast.File, loaded map
 // formatted as a command if isCommand is set.
 func markdownForPackage(pkg *packages.Package, files []*ast.File, isCommand bool) (string, error) {
 	var docMode doc.Mode
-	docPkg, err := packageDoc(pkg, files, docMode)
+	docPkg, fset, err := packageDoc(pkg, files, docMode)
 	if err != nil {
 		return "", err
 	}
@@ -123,7 +123,7 @@ func markdownForPackage(pkg *packages.Package, files []*ast.File, isCommand bool
 	if err != nil {
 		return "", err
 	}
-	st := newOutputState(docPkg, pkg,
+	st := newOutputState(docPkg, pkg, fset,
 		extraMarkdown(extraMD),
 		markdownFlavour(cmdFlags.Markdown),
 		goPkgSite(cmdFlags.GoPkgSite),
@@ -137,28 +137,31 @@ func markdownForPackage(pkg *packages.Package, files []*ast.File, isCommand bool
 }
 
 // packageDoc returns the documentation for pkg as parsed into files, falling
-// back to fallbackPackageDoc if that cannot be determined.
-func packageDoc(pkg *packages.Package, files []*ast.File, mode doc.Mode) (*doc.Package, error) {
-	docPkg, err := doc.NewFromFiles(pkg.Fset, files, pkg.PkgPath, mode)
+// back to fallbackPackageDoc if that cannot be determined. It also returns the
+// FileSet for the positions of the declarations in that documentation, which
+// must be used to format them.
+func packageDoc(pkg *packages.Package, files []*ast.File, mode doc.Mode) (*doc.Package, *token.FileSet, error) {
+	fset := pkg.Fset
+	docPkg, err := doc.NewFromFiles(fset, files, pkg.PkgPath, mode)
 	if err != nil {
-		if fallback, ferr := fallbackPackageDoc(pkg, mode); fallback != nil || ferr != nil {
-			docPkg, err = fallback, ferr
+		if fallback, fallbackFset, ferr := fallbackPackageDoc(pkg, mode); fallback != nil || ferr != nil {
+			docPkg, fset, err = fallback, fallbackFset, ferr
 		}
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to create ast.Package for %v: %v", pkg.PkgPath, err)
+		return nil, nil, fmt.Errorf("failed to create ast.Package for %v: %v", pkg.PkgPath, err)
 	}
-	return docPkg, nil
+	return docPkg, fset, nil
 }
 
 // fallbackPackageDoc determines a package's documentation by parsing its
-// original Go source files directly. It is used when doc.NewFromFiles fails
-// for the files the package was loaded from, eg. for cgo files in the go
-// build cache, which have no .go extension. It returns nil, nil if there are
-// no source files to fall back to.
-func fallbackPackageDoc(pkg *packages.Package, mode doc.Mode) (*doc.Package, error) {
+// original Go source files directly, into a new FileSet that it also returns.
+// It is used when doc.NewFromFiles fails for the files the package was loaded
+// from, eg. for cgo files in the go build cache, which have no .go extension.
+// It returns nil, nil, nil if there are no source files to fall back to.
+func fallbackPackageDoc(pkg *packages.Package, mode doc.Mode) (*doc.Package, *token.FileSet, error) {
 	if len(pkg.GoFiles) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	fset := token.NewFileSet()
 	var files []*ast.File
@@ -170,9 +173,10 @@ func fallbackPackageDoc(pkg *packages.Package, mode doc.Mode) (*doc.Package, err
 		}
 	}
 	if len(files) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
-	return doc.NewFromFiles(fset, files, pkg.PkgPath, mode)
+	docPkg, err := doc.NewFromFiles(fset, files, pkg.PkgPath, mode)
+	return docPkg, fset, err
 }
 
 // allExamples returns every example in docPkg: those at package level and

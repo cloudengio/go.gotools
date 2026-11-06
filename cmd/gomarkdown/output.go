@@ -97,6 +97,7 @@ type outputState struct {
 	markdownGoCodeStart string
 	doc                 *doc.Package
 	pkg                 *packages.Package
+	fset                *token.FileSet
 	options             outputOptions
 	tplFuncs            map[string]interface{}
 }
@@ -141,8 +142,8 @@ func extraMarkdown(md string) outputOption {
 	}
 }
 
-func newOutputState(doc *doc.Package, pkg *packages.Package, opts ...outputOption) *outputState {
-	st := &outputState{doc: doc, pkg: pkg}
+func newOutputState(doc *doc.Package, pkg *packages.Package, fset *token.FileSet, opts ...outputOption) *outputState {
+	st := &outputState{doc: doc, pkg: pkg, fset: fset}
 	for _, fn := range opts {
 		fn(&st.options)
 	}
@@ -202,7 +203,7 @@ func (st *outputState) valueDecl(decl *ast.GenDecl) string {
 	case token.CONST, token.VAR:
 		out := &strings.Builder{}
 		for _, spec := range decl.Specs {
-			if err := format.Node(out, st.pkg.Fset, spec); err != nil {
+			if err := format.Node(out, st.fset, spec); err != nil {
 				fmt.Fprintf(os.Stderr, "%v: failed to format const or var node: %v", st.pkg.PkgPath, err)
 			}
 			out.WriteString("\n")
@@ -214,8 +215,8 @@ func (st *outputState) valueDecl(decl *ast.GenDecl) string {
 
 func (st *outputState) funcDecl(decl *ast.FuncDecl) string {
 	out := &strings.Builder{}
-	if err := format.Node(out, st.pkg.Fset, decl); err != nil {
-		at := st.pkg.Fset.PositionFor(decl.Pos(), false)
+	if err := format.Node(out, st.fset, decl); err != nil {
+		at := st.fset.PositionFor(decl.Pos(), false)
 		fmt.Fprintf(os.Stderr, "%v: failed to format function declaration at %v: %v", st.pkg.PkgPath, at, err)
 	}
 	return out.String()
@@ -223,8 +224,8 @@ func (st *outputState) funcDecl(decl *ast.FuncDecl) string {
 
 func (st *outputState) typeDecl(decl *ast.GenDecl) string {
 	out := &strings.Builder{}
-	if err := format.Node(out, st.pkg.Fset, decl); err != nil {
-		at := st.pkg.Fset.PositionFor(decl.Pos(), false)
+	if err := format.Node(out, st.fset, decl); err != nil {
+		at := st.fset.PositionFor(decl.Pos(), false)
 		fmt.Fprintf(os.Stderr, "%v: failed to format type declaration at %v: %v", st.pkg.PkgPath, at, err)
 	}
 	return out.String()
