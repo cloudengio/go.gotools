@@ -1,0 +1,13 @@
+--- Overview
+Fixes gomarkdown formatting declarations with the wrong FileSet when documentation comes from the cgo fallback path. Previously, positions from the fallback's parse were resolved against the package's FileSet, which could misplace comments in the output.
+
+--- Key Changes
+cmd/gomarkdown
+  * packageDoc and fallbackPackageDoc now also return the *token.FileSet for the positions in the returned documentation.
+  * outputState stores this FileSet, passed through a new newOutputState parameter, and uses it instead of pkg.Fset to format and report positions for value, function and type declarations.
+  * Added tests that verify the fallback's FileSet is used and output is formatted correctly, and that the package's FileSet is returned when no fallback is needed.
+
+--- Breaking Changes
+None
+
+ Generated with Claude Code (https://claude.com/claude-code)
