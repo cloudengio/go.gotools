@@ -1,0 +1,14 @@
+--- Overview
+gomarkdown now renders constant declarations as valid Go, with the const keyword or a const ( ... ) block, instead of listing each spec on its own without the keyword.
+
+--- Key Changes
+cmd/gomarkdown
+  * Added constDecl, which turns a parenthesized group that has only one spec left (one declared alone, or the only one left after unexported constants are removed) into a single const line. The doc comment moves to the top so it isn't printed after the keyword.
+  * Specs with no value of their own (for example, ones that rely on iota) stay in a block, because a const line without a value isn't valid Go.
+  * valueDecl now formats CONST declarations as whole declarations and trims trailing newlines. VAR keeps the old per-spec formatting.
+  * Tests:
+    * Updated the expected const output in the existing test.
+    * Added a table-driven test, TestValueDeclConsts. It covers single lines, multiple names on one line, groups of one, two and three, groups that have unexported constants removed, and iota.
+
+--- Breaking Changes
+None. The generated markdown for constants changes format: it now includes the const keyword and block syntax.
