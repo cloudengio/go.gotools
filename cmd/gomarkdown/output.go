@@ -198,9 +198,42 @@ func (st *outputState) badges() string {
 	return strings.Join(badges, " ")
 }
 
+// constDecl returns decl in the form in which it should be displayed: a
+// single constant as a const line, even if it was declared in, or is all that
+// is left of, a parenthesized group, and two or more as a const block. A
+// constant with no value of its own, eg. one that relies on iota, stays in a
+// block since it is not a valid const line.
+func constDecl(decl *ast.GenDecl) *ast.GenDecl {
+	if len(decl.Specs) != 1 || !decl.Lparen.IsValid() {
+		return decl
+	}
+	spec, ok := decl.Specs[0].(*ast.ValueSpec)
+	if !ok || len(spec.Values) == 0 {
+		return decl
+	}
+	// A const line's comment must belong to the declaration and precede its
+	// position, otherwise it is printed after the const keyword.
+	line := *spec
+	line.Doc = nil
+	return &ast.GenDecl{
+		Doc:    spec.Doc,
+		TokPos: spec.Pos(),
+		Tok:    decl.Tok,
+		Specs:  []ast.Spec{&line},
+	}
+}
+
 func (st *outputState) valueDecl(decl *ast.GenDecl) string {
 	switch decl.Tok {
-	case token.CONST, token.VAR:
+	case token.CONST:
+		out := &strings.Builder{}
+		if err := format.Node(out, st.fset, constDecl(decl)); err != nil {
+			at := st.fset.PositionFor(decl.Pos(), false)
+			fmt.Fprintf(os.Stderr, "%v: failed to format const declaration at %v: %v", st.pkg.PkgPath, at, err)
+		}
+		// A trailing comment on the last line is followed by a newline.
+		return strings.TrimRight(out.String(), "\n")
+	case token.VAR:
 		out := &strings.Builder{}
 		for _, spec := range decl.Specs {
 			if err := format.Node(out, st.fset, spec); err != nil {
