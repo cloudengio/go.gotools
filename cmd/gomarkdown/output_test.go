@@ -9,6 +9,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -651,14 +652,18 @@ func TestExcludeFlagParsing(t *testing.T) {
 			if got, want := fs.Lookup("exclude").DefValue, strconv.Quote(defaultExclude); got != want {
 				t.Errorf("DefValue = %q, want %q", got, want)
 			}
-			got, err := cleanExclusions(cf.Exclude.Values)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !slices.Equal(got, tc.want) {
-				t.Errorf("exclusions = %v, want %v", got, tc.want)
+			if !slices.Equal(cf.Exclude.Values, tc.want) {
+				t.Errorf("exclusions = %v, want %v", cf.Exclude.Values, tc.want)
 			}
 		})
+	}
+
+	for _, bad := range []string{"--exclude=docs/a.md", "--exclude=..", "--exclude=."} {
+		fs := flag.NewFlagSet("test", flag.ContinueOnError)
+		var cf cmdlineFlags
+		if err := registerAndParseFlags(fs, []string{bad}, &cf); err == nil {
+			t.Errorf("expected error for %q, got nil", bad)
+		}
 	}
 }
 
@@ -829,7 +834,7 @@ func TestCleanExclusions(t *testing.T) {
 	if want := []string{"a.md", "b.md"}; !slices.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
 	}
-	for _, bad := range []string{"docs/a.md", "../a.md"} {
+	for _, bad := range []string{"docs/a.md", "../a.md", ".", ".."} {
 		if _, err := cleanExclusions([]string{bad}); err == nil {
 			t.Errorf("expected error for %q", bad)
 		}
@@ -882,5 +887,58 @@ func TestLookupPackage(t *testing.T) {
 
 	if got := lookupPackage(map[string]*packages.Package{}, "example.com/p"); got != nil {
 		t.Errorf("expected nil for a missing package, got %v", got)
+	}
+}
+
+func TestWriteMarkdown_OnlyOutputsChangedFiles(t *testing.T) {
+	origOverwrite := cmdFlags.Overwrite
+	t.Cleanup(func() {
+		cmdFlags.Overwrite = origOverwrite
+	})
+
+	capture := func(fn func() error) (string, error) {
+		orig := os.Stdout
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		os.Stdout = w
+		defer func() { os.Stdout = orig }()
+		runErr := fn()
+		_ = w.Close()
+		out, readErr := io.ReadAll(r)
+		_ = r.Close()
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		return string(out), runErr
+	}
+
+	file := filepath.Join(t.TempDir(), "README.md")
+
+	cmdFlags.Overwrite = false
+	out, err := capture(func() error { return writeMarkdown(file, "# Initial\n") })
+	if err != nil {
+		t.Fatalf("new writeMarkdown failed: %v", err)
+	}
+	if strings.TrimSpace(out) != "updated: "+file {
+		t.Errorf("got output %q, want %q", out, "updated: "+file)
+	}
+
+	out, err = capture(func() error { return writeMarkdown(file, "# Initial\n") })
+	if err != nil {
+		t.Fatalf("unchanged writeMarkdown failed: %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected no output for unchanged file, got %q", out)
+	}
+
+	cmdFlags.Overwrite = true
+	out, err = capture(func() error { return writeMarkdown(file, "# Updated\n") })
+	if err != nil {
+		t.Fatalf("updated writeMarkdown failed: %v", err)
+	}
+	if strings.TrimSpace(out) != "updated: "+file {
+		t.Errorf("got output %q, want %q", out, "updated: "+file)
 	}
 }

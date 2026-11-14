@@ -61,6 +61,12 @@ func registerAndParseFlags(fs *flag.FlagSet, args []string, cf *cmdlineFlags) er
 	// be applied after parsing and when --exclude was not specified.
 	if !flagWasSet(fs, "exclude") {
 		cf.Exclude.Values = []string{defaultExclude}
+	} else {
+		cleaned, err := cleanExclusions(cf.Exclude.Values)
+		if err != nil {
+			return fmt.Errorf("--exclude: %w", err)
+		}
+		cf.Exclude.Values = cleaned
 	}
 	return nil
 }
@@ -143,12 +149,12 @@ func mergePackages(locator *locate.T) (merged map[string][]*ast.File, loaded map
 	loaded = map[string]*packages.Package{}
 	commands = map[string]bool{}
 	locator.WalkPackages(func(pkg *packages.Package) {
-		if pkg.Name == "main" {
-			commands[pkg.PkgPath] = true
-		}
 		if strings.HasSuffix(pkg.PkgPath, ".test") {
 			// ignore compiled test code (ie. the generated main).
 			return
+		}
+		if pkg.Name == "main" {
+			commands[pkg.PkgPath] = true
 		}
 		loaded[pkg.PkgPath] = pkg
 		baseName := strings.TrimSuffix(pkg.PkgPath, "_test")

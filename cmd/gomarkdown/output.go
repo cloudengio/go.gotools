@@ -391,7 +391,7 @@ func cleanExclusions(list []string) ([]string, error) {
 			continue
 		}
 		item = filepath.Clean(item)
-		if strings.ContainsRune(item, '/') || strings.ContainsRune(item, filepath.Separator) {
+		if item == "." || item == ".." || strings.ContainsRune(item, '/') || strings.ContainsRune(item, filepath.Separator) {
 			return nil, fmt.Errorf("exclusion %q must be a filename, not a path", item)
 		}
 		out = append(out, item)
