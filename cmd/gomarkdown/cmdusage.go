@@ -1,7 +1,3 @@
-// Copyright 2020 cloudeng llc. All rights reserved.
-// Use of this source code is governed by the Apache-2.0
-// license that can be found in the LICENSE file.
-
 // Usage of gomarkdown:
 //
 // gomarkdown is a utility for generating markdown from go source comments.
@@ -25,12 +21,26 @@
 //
 // gomarkdown will also include any other existing .md files in the package's
 // directory under an 'External Markdown Files Included Here' section, using
-// subheadings that include each file's filename.
+// subheadings that include each file's filename. Files matching --exclude
+// (default code_review.md) are ignored. Exclusions are filenames, not paths,
+// and are matched case-insensitively. If a .gomarkdown.yaml file is present
+// in the package's directory, its 'exclusions' list overrides --exclude.
+//
+// If a .gomarkdown.tpl file is present in the package's directory, gomarkdown
+// uses it as a Go text/template to generate the output instead of appending
+// external .md files automatically. In this case --exclude and .gomarkdown.yaml
+// are not used. Two template functions are available:
+//   - include "<filename>" includes the contents of the specified file, which
+//     must be within the package's directory and may not be the markdown
+//     output file.
+//   - godoc generates the godoc markdown output for the package or command.
 //
 // Command line flags:
 //
 //	-circleci string
 //	  	set to the circleci project to insert a circleci build badge
+//	-exclude value
+//	  	comma-separated list of markdown files to exclude. (default code_review.md)
 //	-gopkg string
 //	  	link to this site for full godoc and godoc examples (default "pkg.go.dev")
 //	-goreportcard

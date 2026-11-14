@@ -5,11 +5,13 @@
 package main
 
 import (
+	"flag"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -270,7 +272,7 @@ func TestLoadExtraMarkdown(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err := loadExtraMarkdown(dir, "README.md")
+	got, err := loadExtraMarkdown(openTestRoot(t, dir), "README.md")
 	if err != nil {
 		t.Fatalf("loadExtraMarkdown returned error: %v", err)
 	}
@@ -317,7 +319,7 @@ func TestLoadExtraMarkdown_Security(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err := loadExtraMarkdown(dir, "README.md")
+	got, err := loadExtraMarkdown(openTestRoot(t, dir), "README.md")
 	if err != nil {
 		t.Fatalf("loadExtraMarkdown failed: %v", err)
 	}
@@ -327,5 +329,483 @@ func TestLoadExtraMarkdown_Security(t *testing.T) {
 	}
 	if !strings.Contains(got, "Normal Content") {
 		t.Errorf("loadExtraMarkdown should include normal regular files:\n%s", got)
+	}
+}
+
+func testDocPackage(t *testing.T, pkgPath, src string) (*packages.Package, *token.FileSet, *ast.File) {
+	t.Helper()
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "p.go", src, parser.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg := &packages.Package{PkgPath: pkgPath, Fset: fset}
+	return pkg, fset, file
+}
+
+func openTestRoot(t *testing.T, dir string) *os.Root {
+	t.Helper()
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { root.Close() })
+	return root
+}
+
+func writeTestFiles(t *testing.T, dir string, files map[string]string) {
+	t.Helper()
+	for rel, content := range files {
+		full := filepath.Join(dir, rel)
+		if err := os.MkdirAll(filepath.Dir(full), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(content), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestRenderPackageMarkdown_WithTemplate(t *testing.T) {
+	pkg, _, file := testDocPackage(t, "example.com/p", "// Package p provides helpers.\npackage p\n\n// Hello greets.\nfunc Hello() {}\n")
+	docPkg, docFset, err := packageDoc(pkg, []*ast.File{file}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	intro := "# Custom Intro\n\nLiteral braces: {{not-a-template}}.\n"
+	design := "## Design Notes\n\nDetails from subdir.\n"
+	ignored := "# Ignored\n\nShould not appear.\n"
+	tpl := "{{include \"intro.md\"}}\n{{godoc}}\n{{include \"docs/design.md\"}}"
+
+	writeTestFiles(t, dir, map[string]string{
+		"intro.md":       intro,
+		"docs/design.md": design,
+		"ignored.md":     ignored,
+		templateFilename: tpl,
+	})
+
+	got, err := renderPackageMarkdown(dir, renderConfig{mdOutput: "README.md"}, docPkg, pkg, docFset,
+		markdownFlavour("github"),
+		goPkgSite("pkg.go.dev"),
+	)
+	if err != nil {
+		t.Fatalf("renderPackageMarkdown failed: %v", err)
+	}
+
+	for _, want := range []string{
+		intro,
+		design,
+		"# Package [example.com/p](https://pkg.go.dev/example.com/p?tab=doc)",
+		"func Hello()",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("expected %q in output, got:\n%s", want, got)
+		}
+	}
+	for _, unwanted := range []string{
+		"External Markdown Files Included Here",
+		"Should not appear",
+	} {
+		if strings.Contains(got, unwanted) {
+			t.Errorf("did not expect %q in output, got:\n%s", unwanted, got)
+		}
+	}
+
+	introIdx := strings.Index(got, "# Custom Intro")
+	godocIdx := strings.Index(got, "# Package [example.com/p]")
+	designIdx := strings.Index(got, "## Design Notes")
+	if introIdx >= godocIdx || godocIdx >= designIdx {
+		t.Errorf("unexpected section order: intro=%d, godoc=%d, design=%d\ngot:\n%s", introIdx, godocIdx, designIdx, got)
+	}
+}
+
+func TestRenderPackageMarkdown_CommandWithTemplate(t *testing.T) {
+	pkg, _, file := testDocPackage(t, "example.com/cmd/mytool", "// Usage of mytool:\n//\n// Overview:\n// mytool runs tasks.\npackage main\n")
+	docPkg, docFset, err := packageDoc(pkg, []*ast.File{file}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	writeTestFiles(t, dir, map[string]string{
+		"extra.md":       "## Extra\n\nExtra text.\n",
+		templateFilename: "{{godoc}}\n{{include \"extra.md\"}}",
+	})
+
+	got, err := renderPackageMarkdown(dir, renderConfig{mdOutput: "README.md", isCommand: true}, docPkg, pkg, docFset,
+		markdownFlavour("github"),
+		goPkgSite("pkg.go.dev"),
+	)
+	if err != nil {
+		t.Fatalf("renderPackageMarkdown failed: %v", err)
+	}
+
+	if !strings.Contains(got, "# [example.com/cmd/mytool](https://pkg.go.dev/example.com/cmd/mytool?tab=doc)") {
+		t.Errorf("expected command godoc header, got:\n%s", got)
+	}
+	if !strings.Contains(got, "# Usage of `mytool`") || !strings.Contains(got, "`mytool` runs tasks.") {
+		t.Errorf("expected command formatting in godoc output, got:\n%s", got)
+	}
+	if !strings.Contains(got, "## Extra\n\nExtra text.\n") {
+		t.Errorf("expected included extra.md, got:\n%s", got)
+	}
+}
+
+func TestRenderPackageMarkdown_WithoutTemplate(t *testing.T) {
+	pkg, _, file := testDocPackage(t, "example.com/p", "// Package p provides helpers.\npackage p\n")
+	docPkg, docFset, err := packageDoc(pkg, []*ast.File{file}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	writeTestFiles(t, dir, map[string]string{"notes.md": "# My Notes\n\nBody.\n"})
+
+	got, err := renderPackageMarkdown(dir, renderConfig{mdOutput: "README.md"}, docPkg, pkg, docFset,
+		markdownFlavour("github"),
+		goPkgSite("pkg.go.dev"),
+	)
+	if err != nil {
+		t.Fatalf("renderPackageMarkdown failed: %v", err)
+	}
+
+	if !strings.Contains(got, "## External Markdown Files Included Here") || !strings.Contains(got, "### My Notes (notes.md)") {
+		t.Errorf("expected default external markdown inclusion without template, got:\n%s", got)
+	}
+}
+
+func TestRenderPackageMarkdown_TemplateErrors(t *testing.T) {
+	pkg, _, file := testDocPackage(t, "example.com/p", "package p\n")
+	docPkg, docFset, err := packageDoc(pkg, []*ast.File{file}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	outsideDir := t.TempDir()
+	outsideFile := filepath.Join(outsideDir, "secret.md")
+	if err := os.WriteFile(outsideFile, []byte("secret"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name  string
+		setup func(t *testing.T, dir string)
+	}{
+		{
+			name: "missing include file",
+			setup: func(t *testing.T, dir string) {
+				writeTestFiles(t, dir, map[string]string{templateFilename: `{{include "missing.md"}}`})
+			},
+		},
+		{
+			name: "invalid template syntax",
+			setup: func(t *testing.T, dir string) {
+				writeTestFiles(t, dir, map[string]string{templateFilename: `{{include `})
+			},
+		},
+		{
+			name: "path traversal blocked",
+			setup: func(t *testing.T, dir string) {
+				writeTestFiles(t, dir, map[string]string{templateFilename: `{{include "../secret.md"}}`})
+			},
+		},
+		{
+			name: "absolute path blocked",
+			setup: func(t *testing.T, dir string) {
+				tpl := `{{include "` + filepath.ToSlash(outsideFile) + `"}}`
+				writeTestFiles(t, dir, map[string]string{templateFilename: tpl})
+			},
+		},
+		{
+			name: "include directory rejected",
+			setup: func(t *testing.T, dir string) {
+				if err := os.Mkdir(filepath.Join(dir, "subdir"), 0700); err != nil {
+					t.Fatal(err)
+				}
+				writeTestFiles(t, dir, map[string]string{templateFilename: `{{include "subdir"}}`})
+			},
+		},
+		{
+			name: "include output file rejected",
+			setup: func(t *testing.T, dir string) {
+				writeTestFiles(t, dir, map[string]string{
+					"README.md":      "# Previous output\n",
+					templateFilename: `{{include "./readme.md"}}`,
+				})
+			},
+		},
+		{
+			name: "template is directory rejected",
+			setup: func(t *testing.T, dir string) {
+				if err := os.Mkdir(filepath.Join(dir, templateFilename), 0700); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name: "symlink escaping root blocked",
+			setup: func(t *testing.T, dir string) {
+				if err := os.Symlink(outsideFile, filepath.Join(dir, "escape.md")); err != nil {
+					t.Skipf("symlinks not supported: %v", err)
+				}
+				writeTestFiles(t, dir, map[string]string{templateFilename: `{{include "escape.md"}}`})
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			tc.setup(t, dir)
+			if _, err := renderPackageMarkdown(dir, renderConfig{mdOutput: "README.md"}, docPkg, pkg, docFset,
+				markdownFlavour("github"),
+				goPkgSite("pkg.go.dev"),
+			); err == nil {
+				t.Errorf("expected error for %s, got nil", tc.name)
+			}
+		})
+	}
+}
+
+func TestReadBoundedFile_SizeLimit(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFiles(t, dir, map[string]string{"small.md": "hello", "large.md": "hello world!"})
+	root := openTestRoot(t, dir)
+
+	got, err := readBoundedFile(root, "small.md", 5)
+	if err != nil {
+		t.Fatalf("unexpected error for exact-limit file: %v", err)
+	}
+	if string(got) != "hello" {
+		t.Errorf("got %q, want %q", string(got), "hello")
+	}
+
+	if _, err := readBoundedFile(root, "large.md", 5); err == nil {
+		t.Errorf("expected size-limit error for large.md, got nil")
+	}
+}
+
+func TestExcludeFlagParsing(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{
+			name: "default",
+			args: nil,
+			want: []string{defaultExclude},
+		},
+		{
+			name: "comma separated",
+			args: []string{"--exclude=a.md,b.md"},
+			want: []string{"a.md", "b.md"},
+		},
+		{
+			name: "repeated",
+			args: []string{"--exclude=a.md", "--exclude=b.md"},
+			want: []string{"a.md", "b.md"},
+		},
+		{
+			name: "empty clears default",
+			args: []string{"--exclude="},
+			want: nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			fs := flag.NewFlagSet("test", flag.ContinueOnError)
+			var cf cmdlineFlags
+			if err := registerAndParseFlags(fs, tc.args, &cf); err != nil {
+				t.Fatalf("registerAndParseFlags failed: %v", err)
+			}
+			if got := fs.Lookup("exclude").DefValue; got != defaultExclude {
+				t.Errorf("DefValue = %q, want %q", got, defaultExclude)
+			}
+			got, err := cleanExclusions(cf.Exclude.Values)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("exclusions = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestRenderPackageMarkdown_ExclusionsAndConfig(t *testing.T) {
+	pkg, _, file := testDocPackage(t, "example.com/p", "// Package p provides helpers.\npackage p\n")
+	docPkg, docFset, err := packageDoc(pkg, []*ast.File{file}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	baseFiles := map[string]string{
+		"code_review.md": "# Code Review\n\nReview content.\n",
+		"notes.md":       "# Notes\n\nNotes content.\n",
+		"design.md":      "# Design\n\nDesign content.\n",
+	}
+
+	tests := []struct {
+		name        string
+		configYAML  string
+		writeConfig bool
+		cliExcludes []string
+		want        []string
+		unwanted    []string
+	}{
+		{
+			name:        "cli exclude filters code_review.md",
+			cliExcludes: []string{"code_review.md"},
+			want:        []string{"Notes content.", "Design content."},
+			unwanted:    []string{"Review content."},
+		},
+		{
+			name:        "config exclusions override cli exclude",
+			writeConfig: true,
+			configYAML:  "exclusions:\n  - notes.md\n",
+			cliExcludes: []string{"code_review.md"},
+			want:        []string{"Review content.", "Design content."},
+			unwanted:    []string{"Notes content."},
+		},
+		{
+			name:        "config empty exclusions overrides cli exclude",
+			writeConfig: true,
+			configYAML:  "exclusions: []\n",
+			cliExcludes: []string{"code_review.md"},
+			want:        []string{"Review content.", "Notes content.", "Design content."},
+		},
+		{
+			name:        "config without exclusions keeps cli exclude",
+			writeConfig: true,
+			configYAML:  "{}\n",
+			cliExcludes: []string{"code_review.md"},
+			want:        []string{"Notes content.", "Design content."},
+			unwanted:    []string{"Review content."},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			writeTestFiles(t, dir, baseFiles)
+			if tc.writeConfig {
+				writeTestFiles(t, dir, map[string]string{configFilename: tc.configYAML})
+			}
+			rc := renderConfig{mdOutput: "README.md", exclusions: tc.cliExcludes}
+			got, err := renderPackageMarkdown(dir, rc, docPkg, pkg, docFset,
+				markdownFlavour("github"),
+				goPkgSite("pkg.go.dev"),
+			)
+			if err != nil {
+				t.Fatalf("renderPackageMarkdown failed: %v", err)
+			}
+			for _, w := range tc.want {
+				if !strings.Contains(got, w) {
+					t.Errorf("expected %q in output, got:\n%s", w, got)
+				}
+			}
+			for _, u := range tc.unwanted {
+				if strings.Contains(got, u) {
+					t.Errorf("did not expect %q in output, got:\n%s", u, got)
+				}
+			}
+		})
+	}
+}
+
+func TestRenderPackageMarkdown_ConfigErrors(t *testing.T) {
+	pkg, _, file := testDocPackage(t, "example.com/p", "package p\n")
+	docPkg, docFset, err := packageDoc(pkg, []*ast.File{file}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name  string
+		setup func(t *testing.T, dir string)
+	}{
+		{
+			name: "invalid yaml",
+			setup: func(t *testing.T, dir string) {
+				writeTestFiles(t, dir, map[string]string{configFilename: "exclusions: [unclosed"})
+			},
+		},
+		{
+			name: "unknown key",
+			setup: func(t *testing.T, dir string) {
+				writeTestFiles(t, dir, map[string]string{configFilename: "unknown_key: [a.md]\n"})
+			},
+		},
+		{
+			name: "exclusion is a path",
+			setup: func(t *testing.T, dir string) {
+				writeTestFiles(t, dir, map[string]string{configFilename: "exclusions: [docs/notes.md]\n"})
+			},
+		},
+		{
+			name: "config is directory",
+			setup: func(t *testing.T, dir string) {
+				if err := os.Mkdir(filepath.Join(dir, configFilename), 0700); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			tc.setup(t, dir)
+			if _, err := renderPackageMarkdown(dir, renderConfig{mdOutput: "README.md"}, docPkg, pkg, docFset,
+				markdownFlavour("github"),
+				goPkgSite("pkg.go.dev"),
+			); err == nil {
+				t.Errorf("expected error for %s, got nil", tc.name)
+			}
+		})
+	}
+}
+
+func TestRenderPackageMarkdown_TemplateIgnoresConfig(t *testing.T) {
+	pkg, _, file := testDocPackage(t, "example.com/p", "// Package p provides helpers.\npackage p\n")
+	docPkg, docFset, err := packageDoc(pkg, []*ast.File{file}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	writeTestFiles(t, dir, map[string]string{
+		configFilename:   "unknown_key: [a.md]\n",
+		"notes.md":       "# Notes\n\nNotes content.\n",
+		templateFilename: `{{include "notes.md"}}`,
+	})
+	rc := renderConfig{mdOutput: "README.md", exclusions: []string{"notes.md"}}
+	got, err := renderPackageMarkdown(dir, rc, docPkg, pkg, docFset,
+		markdownFlavour("github"),
+		goPkgSite("pkg.go.dev"),
+	)
+	if err != nil {
+		t.Fatalf("renderPackageMarkdown failed: %v", err)
+	}
+	if !strings.Contains(got, "Notes content.") {
+		t.Errorf("expected included notes.md, got:\n%s", got)
+	}
+}
+
+func TestCleanExclusions(t *testing.T) {
+	got, err := cleanExclusions([]string{" a.md ", "", "./b.md"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"a.md", "b.md"}; !slices.Equal(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	for _, bad := range []string{"docs/a.md", "../a.md"} {
+		if _, err := cleanExclusions([]string{bad}); err == nil {
+			t.Errorf("expected error for %q", bad)
+		}
 	}
 }

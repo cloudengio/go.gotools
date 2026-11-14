@@ -23,13 +23,16 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+const defaultExclude = "code_review.md"
+
 type cmdlineFlags struct {
-	Markdown     string `cmdline:"markdown,github,'markdown style to use, currently only github is supported.'"`
-	GoPkgSite    string `cmdline:"gopkg,pkg.go.dev,link to this site for full godoc and godoc examples"`
-	CircleCI     string `cmdline:"circleci,,set to the circleci project to insert a circleci build badge"`
-	GoReportCard bool   `cmdline:"goreportcard,false,insert a link to goreportcard.com"`
-	MDOutput     string `cmdline:"md-output,README.md,name of markdown output file."`
-	Overwrite    bool   `cmdline:"overwrite,false,overwrite existing file."`
+	Markdown     string       `cmdline:"markdown,github,'markdown style to use, currently only github is supported.'"`
+	GoPkgSite    string       `cmdline:"gopkg,pkg.go.dev,link to this site for full godoc and godoc examples"`
+	CircleCI     string       `cmdline:"circleci,,set to the circleci project to insert a circleci build badge"`
+	GoReportCard bool         `cmdline:"goreportcard,false,insert a link to goreportcard.com"`
+	MDOutput     string       `cmdline:"md-output,README.md,name of markdown output file."`
+	Overwrite    bool         `cmdline:"overwrite,false,overwrite existing file."`
+	Exclude      flags.Commas `cmdline:"exclude,,comma-separated list of markdown files to exclude."`
 }
 
 // validate reports whether the flags that accept one of a fixed set of
@@ -41,15 +44,40 @@ func (c cmdlineFlags) validate() error {
 	return flags.OneOf(c.GoPkgSite).Validate("pkg.go.dev", "godoc.org")
 }
 
+func registerAndParseFlags(fs *flag.FlagSet, args []string, cf *cmdlineFlags) error {
+	usageDefaults := map[string]string{"exclude": defaultExclude}
+	if err := flags.RegisterFlagsInStruct(fs, "cmdline", cf, nil, usageDefaults); err != nil {
+		return fmt.Errorf("failed to register flags: %w", err)
+	}
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if err := cf.validate(); err != nil {
+		return err
+	}
+	// flags.Commas appends to any existing values, so the default can only
+	// be applied after parsing and when --exclude was not specified.
+	if !flagWasSet(fs, "exclude") {
+		cf.Exclude.Values = []string{defaultExclude}
+	}
+	return nil
+}
+
+func flagWasSet(fs *flag.FlagSet, name string) bool {
+	set := false
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			set = true
+		}
+	})
+	return set
+}
+
 var cmdFlags cmdlineFlags
 
 func main() {
 	ctx := context.Background()
-	if err := flags.RegisterFlagsInStruct(flag.CommandLine, "cmdline", &cmdFlags, nil, nil); err != nil {
-		cmdutil.Exitf("failed to register flags: %v", err)
-	}
-	flag.Parse()
-	if err := cmdFlags.validate(); err != nil {
+	if err := registerAndParseFlags(flag.CommandLine, os.Args[1:], &cmdFlags); err != nil {
 		cmdutil.Exitf("%s", err)
 	}
 
@@ -73,6 +101,13 @@ func generateMarkdown(locator *locate.T) error {
 	errs := errors.M{}
 	for name, files := range merged {
 		pkg := loaded[name]
+		if pkg == nil {
+			pkg = loaded[name+"_test"]
+		}
+		if pkg == nil {
+			errs.Append(fmt.Errorf("%s: no loaded package found", name))
+			continue
+		}
 		text, err := markdownForPackage(pkg, files, commands[name])
 		if err != nil {
 			errs.Append(err)
@@ -118,22 +153,17 @@ func markdownForPackage(pkg *packages.Package, files []*ast.File, isCommand bool
 	// since the markdown will list all of the examples in one section.
 	docPkg.Examples = allExamples(docPkg)
 
-	dir := dirForPackage(pkg)
-	extraMD, err := loadExtraMarkdown(dir, cmdFlags.MDOutput)
-	if err != nil {
-		return "", err
+	rc := renderConfig{
+		mdOutput:   cmdFlags.MDOutput,
+		exclusions: cmdFlags.Exclude.Values,
+		isCommand:  isCommand,
 	}
-	st := newOutputState(docPkg, pkg, fset,
-		extraMarkdown(extraMD),
+	return renderPackageMarkdown(dirForPackage(pkg), rc, docPkg, pkg, fset,
 		markdownFlavour(cmdFlags.Markdown),
 		goPkgSite(cmdFlags.GoPkgSite),
 		goreportcard(cmdFlags.GoReportCard),
 		circleciProject(cmdFlags.CircleCI),
 	)
-	if isCommand {
-		return st.outputCommand()
-	}
-	return st.outputPackage()
 }
 
 // packageDoc returns the documentation for pkg as parsed into files, falling
