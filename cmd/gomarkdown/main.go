@@ -14,6 +14,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"cloudeng.io/cmdutil"
@@ -45,7 +46,8 @@ func (c cmdlineFlags) validate() error {
 }
 
 func registerAndParseFlags(fs *flag.FlagSet, args []string, cf *cmdlineFlags) error {
-	usageDefaults := map[string]string{"exclude": defaultExclude}
+	// Quote the default to match the usage output for other string flags.
+	usageDefaults := map[string]string{"exclude": strconv.Quote(defaultExclude)}
 	if err := flags.RegisterFlagsInStruct(fs, "cmdline", cf, nil, usageDefaults); err != nil {
 		return fmt.Errorf("failed to register flags: %w", err)
 	}
@@ -59,6 +61,12 @@ func registerAndParseFlags(fs *flag.FlagSet, args []string, cf *cmdlineFlags) er
 	// be applied after parsing and when --exclude was not specified.
 	if !flagWasSet(fs, "exclude") {
 		cf.Exclude.Values = []string{defaultExclude}
+	} else {
+		cleaned, err := cleanExclusions(cf.Exclude.Values)
+		if err != nil {
+			return fmt.Errorf("--exclude: %w", err)
+		}
+		cf.Exclude.Values = cleaned
 	}
 	return nil
 }
@@ -100,10 +108,7 @@ func generateMarkdown(locator *locate.T) error {
 	merged, loaded, commands := mergePackages(locator)
 	errs := errors.M{}
 	for name, files := range merged {
-		pkg := loaded[name]
-		if pkg == nil {
-			pkg = loaded[name+"_test"]
-		}
+		pkg := lookupPackage(loaded, name)
 		if pkg == nil {
 			errs.Append(fmt.Errorf("%s: no loaded package found", name))
 			continue
@@ -118,6 +123,23 @@ func generateMarkdown(locator *locate.T) error {
 	return errs.Err()
 }
 
+// lookupPackage returns the loaded package for name, falling back to its
+// external test package if that is the only one that was loaded. In that
+// case a copy of the test package is returned with its PkgPath set to name
+// so that the markdown refers to name rather than name_test.
+func lookupPackage(loaded map[string]*packages.Package, name string) *packages.Package {
+	if pkg := loaded[name]; pkg != nil {
+		return pkg
+	}
+	pkg := loaded[name+"_test"]
+	if pkg == nil {
+		return nil
+	}
+	cpy := *pkg
+	cpy.PkgPath = name
+	return &cpy
+}
+
 // mergePackages merges each package and any associated test package into a
 // single set of ast.Files for use with doc.NewFromFiles. It returns those
 // files, the loaded package and whether the package is a command, each keyed
@@ -127,12 +149,12 @@ func mergePackages(locator *locate.T) (merged map[string][]*ast.File, loaded map
 	loaded = map[string]*packages.Package{}
 	commands = map[string]bool{}
 	locator.WalkPackages(func(pkg *packages.Package) {
-		if pkg.Name == "main" {
-			commands[pkg.PkgPath] = true
-		}
 		if strings.HasSuffix(pkg.PkgPath, ".test") {
 			// ignore compiled test code (ie. the generated main).
 			return
+		}
+		if pkg.Name == "main" {
+			commands[pkg.PkgPath] = true
 		}
 		loaded[pkg.PkgPath] = pkg
 		baseName := strings.TrimSuffix(pkg.PkgPath, "_test")
@@ -156,13 +178,13 @@ func markdownForPackage(pkg *packages.Package, files []*ast.File, isCommand bool
 	rc := renderConfig{
 		mdOutput:   cmdFlags.MDOutput,
 		exclusions: cmdFlags.Exclude.Values,
-		isCommand:  isCommand,
 	}
 	return renderPackageMarkdown(dirForPackage(pkg), rc, docPkg, pkg, fset,
 		markdownFlavour(cmdFlags.Markdown),
 		goPkgSite(cmdFlags.GoPkgSite),
 		goreportcard(cmdFlags.GoReportCard),
 		circleciProject(cmdFlags.CircleCI),
+		asCommand(isCommand),
 	)
 }
 

@@ -9,9 +9,11 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -434,9 +436,10 @@ func TestRenderPackageMarkdown_CommandWithTemplate(t *testing.T) {
 		templateFilename: "{{godoc}}\n{{include \"extra.md\"}}",
 	})
 
-	got, err := renderPackageMarkdown(dir, renderConfig{mdOutput: "README.md", isCommand: true}, docPkg, pkg, docFset,
+	got, err := renderPackageMarkdown(dir, renderConfig{mdOutput: "README.md"}, docPkg, pkg, docFset,
 		markdownFlavour("github"),
 		goPkgSite("pkg.go.dev"),
+		asCommand(true),
 	)
 	if err != nil {
 		t.Fatalf("renderPackageMarkdown failed: %v", err)
@@ -537,6 +540,30 @@ func TestRenderPackageMarkdown_TemplateErrors(t *testing.T) {
 			},
 		},
 		{
+			name: "include symlink to output file rejected",
+			setup: func(t *testing.T, dir string) {
+				writeTestFiles(t, dir, map[string]string{
+					"README.md":      "# Previous output\n",
+					templateFilename: `{{include "alias.md"}}`,
+				})
+				if err := os.Symlink("README.md", filepath.Join(dir, "alias.md")); err != nil {
+					t.Skipf("symlinks not supported: %v", err)
+				}
+			},
+		},
+		{
+			name: "include hard link to output file rejected",
+			setup: func(t *testing.T, dir string) {
+				writeTestFiles(t, dir, map[string]string{
+					"README.md":      "# Previous output\n",
+					templateFilename: `{{include "alias.md"}}`,
+				})
+				if err := os.Link(filepath.Join(dir, "README.md"), filepath.Join(dir, "alias.md")); err != nil {
+					t.Skipf("hard links not supported: %v", err)
+				}
+			},
+		},
+		{
 			name: "template is directory rejected",
 			setup: func(t *testing.T, dir string) {
 				if err := os.Mkdir(filepath.Join(dir, templateFilename), 0700); err != nil {
@@ -622,17 +649,21 @@ func TestExcludeFlagParsing(t *testing.T) {
 			if err := registerAndParseFlags(fs, tc.args, &cf); err != nil {
 				t.Fatalf("registerAndParseFlags failed: %v", err)
 			}
-			if got := fs.Lookup("exclude").DefValue; got != defaultExclude {
-				t.Errorf("DefValue = %q, want %q", got, defaultExclude)
+			if got, want := fs.Lookup("exclude").DefValue, strconv.Quote(defaultExclude); got != want {
+				t.Errorf("DefValue = %q, want %q", got, want)
 			}
-			got, err := cleanExclusions(cf.Exclude.Values)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !slices.Equal(got, tc.want) {
-				t.Errorf("exclusions = %v, want %v", got, tc.want)
+			if !slices.Equal(cf.Exclude.Values, tc.want) {
+				t.Errorf("exclusions = %v, want %v", cf.Exclude.Values, tc.want)
 			}
 		})
+	}
+
+	for _, bad := range []string{"--exclude=docs/a.md", "--exclude=..", "--exclude=."} {
+		fs := flag.NewFlagSet("test", flag.ContinueOnError)
+		var cf cmdlineFlags
+		if err := registerAndParseFlags(fs, []string{bad}, &cf); err == nil {
+			t.Errorf("expected error for %q, got nil", bad)
+		}
 	}
 }
 
@@ -803,9 +834,111 @@ func TestCleanExclusions(t *testing.T) {
 	if want := []string{"a.md", "b.md"}; !slices.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
 	}
-	for _, bad := range []string{"docs/a.md", "../a.md"} {
+	for _, bad := range []string{"docs/a.md", "../a.md", ".", ".."} {
 		if _, err := cleanExclusions([]string{bad}); err == nil {
 			t.Errorf("expected error for %q", bad)
 		}
+	}
+}
+
+func TestRenderPackageMarkdown_IncludeSubdirectory(t *testing.T) {
+	pkg, _, file := testDocPackage(t, "example.com/p", "package p\n")
+	docPkg, docFset, err := packageDoc(pkg, []*ast.File{file}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	writeTestFiles(t, dir, map[string]string{
+		"docs/extra.md":  "## Nested\n",
+		templateFilename: `{{include "docs/extra.md"}}`,
+	})
+	got, err := renderPackageMarkdown(dir, renderConfig{mdOutput: "README.md"}, docPkg, pkg, docFset,
+		goPkgSite("pkg.go.dev"),
+	)
+	if err != nil {
+		t.Fatalf("renderPackageMarkdown failed: %v", err)
+	}
+	if got != "## Nested\n" {
+		t.Errorf("got %q, want %q", got, "## Nested\n")
+	}
+}
+
+func TestLookupPackage(t *testing.T) {
+	pkg := &packages.Package{PkgPath: "example.com/p"}
+	xtest := &packages.Package{PkgPath: "example.com/p_test"}
+
+	if got := lookupPackage(map[string]*packages.Package{
+		"example.com/p":      pkg,
+		"example.com/p_test": xtest,
+	}, "example.com/p"); got != pkg {
+		t.Errorf("expected the non-test package to be preferred, got %v", got)
+	}
+
+	got := lookupPackage(map[string]*packages.Package{"example.com/p_test": xtest}, "example.com/p")
+	if got == nil {
+		t.Fatal("expected fallback to the external test package, got nil")
+	}
+	if got.PkgPath != "example.com/p" {
+		t.Errorf("PkgPath = %q, want %q", got.PkgPath, "example.com/p")
+	}
+	if xtest.PkgPath != "example.com/p_test" {
+		t.Errorf("loaded test package was modified: PkgPath = %q", xtest.PkgPath)
+	}
+
+	if got := lookupPackage(map[string]*packages.Package{}, "example.com/p"); got != nil {
+		t.Errorf("expected nil for a missing package, got %v", got)
+	}
+}
+
+func TestWriteMarkdown_OnlyOutputsChangedFiles(t *testing.T) {
+	origOverwrite := cmdFlags.Overwrite
+	t.Cleanup(func() {
+		cmdFlags.Overwrite = origOverwrite
+	})
+
+	capture := func(fn func() error) (string, error) {
+		orig := os.Stdout
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		os.Stdout = w
+		defer func() { os.Stdout = orig }()
+		runErr := fn()
+		_ = w.Close()
+		out, readErr := io.ReadAll(r)
+		_ = r.Close()
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		return string(out), runErr
+	}
+
+	file := filepath.Join(t.TempDir(), "README.md")
+
+	cmdFlags.Overwrite = false
+	out, err := capture(func() error { return writeMarkdown(file, "# Initial\n") })
+	if err != nil {
+		t.Fatalf("new writeMarkdown failed: %v", err)
+	}
+	if strings.TrimSpace(out) != "updated: "+file {
+		t.Errorf("got output %q, want %q", out, "updated: "+file)
+	}
+
+	out, err = capture(func() error { return writeMarkdown(file, "# Initial\n") })
+	if err != nil {
+		t.Fatalf("unchanged writeMarkdown failed: %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected no output for unchanged file, got %q", out)
+	}
+
+	cmdFlags.Overwrite = true
+	out, err = capture(func() error { return writeMarkdown(file, "# Updated\n") })
+	if err != nil {
+		t.Fatalf("updated writeMarkdown failed: %v", err)
+	}
+	if strings.TrimSpace(out) != "updated: "+file {
+		t.Errorf("got output %q, want %q", out, "updated: "+file)
 	}
 }
