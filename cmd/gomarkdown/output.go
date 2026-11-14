@@ -111,6 +111,7 @@ type outputOptions struct {
 	circleciProject string
 	goreportcard    bool
 	extraMarkdown   string
+	isCommand       bool
 }
 
 type outputOption func(o *outputOptions)
@@ -142,6 +143,13 @@ func circleciProject(p string) outputOption {
 func extraMarkdown(md string) outputOption {
 	return func(o *outputOptions) {
 		o.extraMarkdown = md
+	}
+}
+
+// asCommand sets whether the package is to be formatted as a command.
+func asCommand(b bool) outputOption {
+	return func(o *outputOptions) {
+		o.isCommand = b
 	}
 }
 
@@ -316,15 +324,15 @@ func (st *outputState) commandData() any {
 	}
 }
 
-func (st *outputState) templateData(isCommand bool) any {
-	if isCommand {
+func (st *outputState) templateData() any {
+	if st.options.isCommand {
 		return st.commandData()
 	}
 	return st.doc
 }
 
-func (st *outputState) outputGodoc(isCommand bool) (string, error) {
-	if isCommand {
+func (st *outputState) outputGodoc() (string, error) {
+	if st.options.isCommand {
 		return st.outputCommand()
 	}
 	return st.outputPackage()
@@ -341,7 +349,7 @@ func (st *outputState) outputCommand() (string, error) {
 func (st *outputState) executeTemplate(text string, data any) (string, error) {
 	tpl, err := template.New("markdown").Funcs(st.tplFuncs).Parse(text)
 	if err != nil {
-		return "", fmt.Errorf("failed to create template: %v", err)
+		return "", fmt.Errorf("failed to create template: %w", err)
 	}
 	out := &strings.Builder{}
 	err = tpl.Execute(out, data)
@@ -349,9 +357,9 @@ func (st *outputState) executeTemplate(text string, data any) (string, error) {
 }
 
 const (
-	maxExtraMarkdownFileSize = 5 * 1024 * 1024 // 5 MB limit
-	templateFilename         = ".gomarkdown.tpl"
-	configFilename           = ".gomarkdown.yaml"
+	maxInputFileSize = 5 * 1024 * 1024 // 5 MB limit
+	templateFilename = ".gomarkdown.tpl"
+	configFilename   = ".gomarkdown.yaml"
 )
 
 type dirConfig struct {
@@ -359,7 +367,7 @@ type dirConfig struct {
 }
 
 func loadDirConfig(root *os.Root) (*dirConfig, error) {
-	data, err := readBoundedFile(root, configFilename, maxExtraMarkdownFileSize)
+	data, err := readBoundedFile(root, configFilename, maxInputFileSize)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, nil
@@ -407,7 +415,6 @@ func resolveExclusions(cfg *dirConfig, cliExclusions []string) ([]string, error)
 type renderConfig struct {
 	mdOutput   string   // the markdown output file, which is never included.
 	exclusions []string // markdown files to exclude, unless overridden by configFilename.
-	isCommand  bool
 }
 
 func renderPackageMarkdown(dir string, rc renderConfig, docPkg *doc.Package, pkg *packages.Package, fset *token.FileSet, opts ...outputOption) (string, error) {
@@ -417,10 +424,10 @@ func renderPackageMarkdown(dir string, rc renderConfig, docPkg *doc.Package, pkg
 	}
 	defer root.Close()
 
-	tplBytes, err := readBoundedFile(root, templateFilename, maxExtraMarkdownFileSize)
+	tplBytes, err := readBoundedFile(root, templateFilename, maxInputFileSize)
 	if err == nil {
 		st := newOutputState(docPkg, pkg, fset, opts...)
-		return st.outputWithTemplate(root, string(tplBytes), rc.mdOutput, rc.isCommand)
+		return st.outputWithTemplate(root, string(tplBytes), rc.mdOutput)
 	}
 	if !errors.Is(err, os.ErrNotExist) {
 		return "", fmt.Errorf("failed to read %s: %w", templateFilename, err)
@@ -439,23 +446,41 @@ func renderPackageMarkdown(dir string, rc renderConfig, docPkg *doc.Package, pkg
 		return "", err
 	}
 	opts = append(opts[:len(opts):len(opts)], extraMarkdown(extraMD))
-	return newOutputState(docPkg, pkg, fset, opts...).outputGodoc(rc.isCommand)
+	return newOutputState(docPkg, pkg, fset, opts...).outputGodoc()
 }
 
-func (st *outputState) outputWithTemplate(root *os.Root, tplText, mdOutput string, isCommand bool) (string, error) {
+// isOutputFile reports whether filename refers to the markdown output file,
+// either by name or, when both exist, as the same underlying file, eg. via
+// a symlink or hard link.
+func isOutputFile(root *os.Root, filename, mdOutput string) bool {
+	if strings.EqualFold(filepath.Clean(filename), filepath.Clean(mdOutput)) {
+		return true
+	}
+	fi, err := root.Stat(filename)
+	if err != nil {
+		return false
+	}
+	oi, err := root.Stat(mdOutput)
+	if err != nil {
+		return false
+	}
+	return os.SameFile(fi, oi)
+}
+
+func (st *outputState) outputWithTemplate(root *os.Root, tplText, mdOutput string) (string, error) {
 	funcs := template.FuncMap{
 		"include": func(filename string) (string, error) {
-			if strings.EqualFold(filepath.Clean(filename), filepath.Clean(mdOutput)) {
+			if isOutputFile(root, filename, mdOutput) {
 				return "", fmt.Errorf("failed to include %q: it is the markdown output file", filename)
 			}
-			data, err := readBoundedFile(root, filename, maxExtraMarkdownFileSize)
+			data, err := readBoundedFile(root, filename, maxInputFileSize)
 			if err != nil {
 				return "", fmt.Errorf("failed to include %q: %w", filename, err)
 			}
 			return string(data), nil
 		},
 		"godoc": func() (string, error) {
-			return st.outputGodoc(isCommand)
+			return st.outputGodoc()
 		},
 	}
 	tpl, err := template.New(templateFilename).Funcs(funcs).Parse(tplText)
@@ -463,7 +488,7 @@ func (st *outputState) outputWithTemplate(root *os.Root, tplText, mdOutput strin
 		return "", fmt.Errorf("failed to parse %s: %w", templateFilename, err)
 	}
 	out := &strings.Builder{}
-	if err := tpl.Execute(out, st.templateData(isCommand)); err != nil {
+	if err := tpl.Execute(out, st.templateData()); err != nil {
 		return "", fmt.Errorf("failed to execute %s: %w", templateFilename, err)
 	}
 	return out.String(), nil
@@ -539,7 +564,7 @@ func loadExtraMarkdown(root *os.Root, ignoreFilename string, exclusions ...strin
 		}
 		if strings.HasSuffix(strings.ToLower(name), ".md") {
 			info, err := entry.Info()
-			if err != nil || info.Size() > maxExtraMarkdownFileSize {
+			if err != nil || info.Size() > maxInputFileSize {
 				continue
 			}
 			mdFiles = append(mdFiles, name)
@@ -556,7 +581,7 @@ func loadExtraMarkdown(root *os.Root, ignoreFilename string, exclusions ...strin
 		// Read via root and readBoundedFile so that a file replaced by a
 		// symlink or grown since it was listed cannot escape the directory
 		// or exceed the size limit.
-		content, err := readBoundedFile(root, name, maxExtraMarkdownFileSize)
+		content, err := readBoundedFile(root, name, maxInputFileSize)
 		if err != nil {
 			return "", fmt.Errorf("failed to read extra markdown file %s: %w", name, err)
 		}
