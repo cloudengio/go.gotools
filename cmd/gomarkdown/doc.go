@@ -33,7 +33,19 @@ to format package comments.
 
 gomarkdown will also include any other existing .md files in the package's
 directory under an 'External Markdown Files Included Here' section, using
-subheadings that include each file's filename.
+subheadings that include each file's filename. Files matching --exclude
+(default code_review.md) are ignored. Exclusions are filenames, not paths,
+and are matched case-insensitively. If a .gomarkdown.yaml file is present
+in the package's directory, its 'exclusions' list overrides --exclude.
+
+If a .gomarkdown.tpl file is present in the package's directory, gomarkdown
+uses it as a Go text/template to generate the output instead of appending
+external .md files automatically. In this case --exclude and .gomarkdown.yaml
+are not used. Two template functions are available:
+  - include "<filename>" includes the contents of the specified file, which
+    must be within the package's directory and may not be the markdown
+    output file.
+  - godoc generates the godoc markdown output for the package or command.
 `
 
 func init() {

@@ -7,12 +7,14 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/doc"
 	"go/doc/comment"
 	"go/format"
 	"go/token"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -24,6 +26,7 @@ import (
 	"unicode/utf8"
 
 	"golang.org/x/tools/go/packages"
+	"gopkg.in/yaml.v2"
 )
 
 // any line with fewer than the requested number of words and which ends in
@@ -303,37 +306,223 @@ func (st *outputState) comment(indent, preIndent int, text string) string {
 	return out.String()
 }
 
-func (st *outputState) outputPackage() (string, error) {
-	tpl, err := template.New("markdown").Funcs(st.tplFuncs).Parse(markdownPackageTemplate)
-	if err != nil {
-		return "", fmt.Errorf("failed to create template: %v", err)
-	}
-	out := &strings.Builder{}
-	err = tpl.Execute(out, st.doc)
-	return out.String(), err
-}
-
-func (st *outputState) outputCommand() (string, error) {
-	tpl, err := template.New("markdown").Funcs(st.tplFuncs).Parse(markdownCommandTemplate)
-	if err != nil {
-		return "", fmt.Errorf("failed to create template: %v", err)
-	}
-	out := &strings.Builder{}
-	tmp := struct {
+func (st *outputState) commandData() any {
+	return struct {
 		*doc.Package
 		CommandName string
 	}{
 		st.doc,
 		path.Base(st.pkg.PkgPath),
 	}
-	err = tpl.Execute(out, tmp)
+}
+
+func (st *outputState) templateData(isCommand bool) any {
+	if isCommand {
+		return st.commandData()
+	}
+	return st.doc
+}
+
+func (st *outputState) outputGodoc(isCommand bool) (string, error) {
+	if isCommand {
+		return st.outputCommand()
+	}
+	return st.outputPackage()
+}
+
+func (st *outputState) outputPackage() (string, error) {
+	return st.executeTemplate(markdownPackageTemplate, st.doc)
+}
+
+func (st *outputState) outputCommand() (string, error) {
+	return st.executeTemplate(markdownCommandTemplate, st.commandData())
+}
+
+func (st *outputState) executeTemplate(text string, data any) (string, error) {
+	tpl, err := template.New("markdown").Funcs(st.tplFuncs).Parse(text)
+	if err != nil {
+		return "", fmt.Errorf("failed to create template: %v", err)
+	}
+	out := &strings.Builder{}
+	err = tpl.Execute(out, data)
 	return out.String(), err
 }
 
-const maxExtraMarkdownFileSize = 5 * 1024 * 1024 // 5 MB limit
+const (
+	maxExtraMarkdownFileSize = 5 * 1024 * 1024 // 5 MB limit
+	templateFilename         = ".gomarkdown.tpl"
+	configFilename           = ".gomarkdown.yaml"
+)
 
-func loadExtraMarkdown(dir string, ignoreFilename string) (string, error) {
-	entries, err := os.ReadDir(dir)
+type dirConfig struct {
+	Exclusions *[]string `yaml:"exclusions"`
+}
+
+func loadDirConfig(root *os.Root) (*dirConfig, error) {
+	data, err := readBoundedFile(root, configFilename, maxExtraMarkdownFileSize)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to read %s: %w", configFilename, err)
+	}
+	var cfg dirConfig
+	if err := yaml.UnmarshalStrict(data, &cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse %s: %w", configFilename, err)
+	}
+	return &cfg, nil
+}
+
+// cleanExclusions trims and cleans each exclusion, dropping empty entries.
+// Exclusions are matched against filenames in the package's directory and
+// hence an exclusion that contains a path separator is an error.
+func cleanExclusions(list []string) ([]string, error) {
+	var out []string
+	for _, item := range list {
+		if item = strings.TrimSpace(item); item == "" {
+			continue
+		}
+		item = filepath.Clean(item)
+		if strings.ContainsRune(item, '/') || strings.ContainsRune(item, filepath.Separator) {
+			return nil, fmt.Errorf("exclusion %q must be a filename, not a path", item)
+		}
+		out = append(out, item)
+	}
+	return out, nil
+}
+
+func resolveExclusions(cfg *dirConfig, cliExclusions []string) ([]string, error) {
+	if cfg != nil && cfg.Exclusions != nil {
+		ex, err := cleanExclusions(*cfg.Exclusions)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", configFilename, err)
+		}
+		return ex, nil
+	}
+	return cleanExclusions(cliExclusions)
+}
+
+// renderConfig controls how renderPackageMarkdown locates the files, other
+// than the package's go source, that contribute to its markdown.
+type renderConfig struct {
+	mdOutput   string   // the markdown output file, which is never included.
+	exclusions []string // markdown files to exclude, unless overridden by configFilename.
+	isCommand  bool
+}
+
+func renderPackageMarkdown(dir string, rc renderConfig, docPkg *doc.Package, pkg *packages.Package, fset *token.FileSet, opts ...outputOption) (string, error) {
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return "", err
+	}
+	defer root.Close()
+
+	tplBytes, err := readBoundedFile(root, templateFilename, maxExtraMarkdownFileSize)
+	if err == nil {
+		st := newOutputState(docPkg, pkg, fset, opts...)
+		return st.outputWithTemplate(root, string(tplBytes), rc.mdOutput, rc.isCommand)
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("failed to read %s: %w", templateFilename, err)
+	}
+
+	cfg, err := loadDirConfig(root)
+	if err != nil {
+		return "", err
+	}
+	exclusions, err := resolveExclusions(cfg, rc.exclusions)
+	if err != nil {
+		return "", err
+	}
+	extraMD, err := loadExtraMarkdown(root, rc.mdOutput, exclusions...)
+	if err != nil {
+		return "", err
+	}
+	opts = append(opts[:len(opts):len(opts)], extraMarkdown(extraMD))
+	return newOutputState(docPkg, pkg, fset, opts...).outputGodoc(rc.isCommand)
+}
+
+func (st *outputState) outputWithTemplate(root *os.Root, tplText, mdOutput string, isCommand bool) (string, error) {
+	funcs := template.FuncMap{
+		"include": func(filename string) (string, error) {
+			if strings.EqualFold(filepath.Clean(filename), filepath.Clean(mdOutput)) {
+				return "", fmt.Errorf("failed to include %q: it is the markdown output file", filename)
+			}
+			data, err := readBoundedFile(root, filename, maxExtraMarkdownFileSize)
+			if err != nil {
+				return "", fmt.Errorf("failed to include %q: %w", filename, err)
+			}
+			return string(data), nil
+		},
+		"godoc": func() (string, error) {
+			return st.outputGodoc(isCommand)
+		},
+	}
+	tpl, err := template.New(templateFilename).Funcs(funcs).Parse(tplText)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse %s: %w", templateFilename, err)
+	}
+	out := &strings.Builder{}
+	if err := tpl.Execute(out, st.templateData(isCommand)); err != nil {
+		return "", fmt.Errorf("failed to execute %s: %w", templateFilename, err)
+	}
+	return out.String(), nil
+}
+
+func readBoundedFile(root *os.Root, name string, maxSize int64) ([]byte, error) {
+	if name == "" {
+		return nil, fmt.Errorf("empty filename")
+	}
+	f, err := root.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s is not a regular file", name)
+	}
+	if info.Size() > maxSize {
+		return nil, fmt.Errorf("%s exceeds maximum file size of %d bytes", name, maxSize)
+	}
+	data, err := io.ReadAll(io.LimitReader(f, maxSize+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > maxSize {
+		return nil, fmt.Errorf("%s exceeds maximum file size of %d bytes", name, maxSize)
+	}
+	return data, nil
+}
+
+// isExcluded reports whether name matches targetName or any of the
+// exclusions, which must already have been cleaned by cleanExclusions.
+func isExcluded(name, targetName string, exclusions []string) bool {
+	if strings.EqualFold(name, targetName) {
+		return true
+	}
+	for _, ex := range exclusions {
+		if strings.EqualFold(name, ex) {
+			return true
+		}
+	}
+	return false
+}
+
+func readRootDir(root *os.Root) ([]os.DirEntry, error) {
+	d, err := root.Open(".")
+	if err != nil {
+		return nil, err
+	}
+	defer d.Close()
+	return d.ReadDir(-1)
+}
+
+func loadExtraMarkdown(root *os.Root, ignoreFilename string, exclusions ...string) (string, error) {
+	entries, err := readRootDir(root)
 	if err != nil {
 		return "", err
 	}
@@ -345,10 +534,7 @@ func loadExtraMarkdown(dir string, ignoreFilename string) (string, error) {
 			continue
 		}
 		name := entry.Name()
-		if strings.HasPrefix(name, ".") {
-			continue
-		}
-		if strings.EqualFold(name, targetName) {
+		if strings.HasPrefix(name, ".") || isExcluded(name, targetName, exclusions) {
 			continue
 		}
 		if strings.HasSuffix(strings.ToLower(name), ".md") {
@@ -367,7 +553,10 @@ func loadExtraMarkdown(dir string, ignoreFilename string) (string, error) {
 	var buf strings.Builder
 	buf.WriteString("## External Markdown Files Included Here\n\n")
 	for _, name := range mdFiles {
-		content, err := os.ReadFile(filepath.Join(dir, name))
+		// Read via root and readBoundedFile so that a file replaced by a
+		// symlink or grown since it was listed cannot escape the directory
+		// or exceed the size limit.
+		content, err := readBoundedFile(root, name, maxExtraMarkdownFileSize)
 		if err != nil {
 			return "", fmt.Errorf("failed to read extra markdown file %s: %w", name, err)
 		}
