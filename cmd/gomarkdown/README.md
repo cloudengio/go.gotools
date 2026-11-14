@@ -34,11 +34,17 @@ If a .gomarkdown.tpl file is present in the package's directory,
 `gomarkdown` uses it as a Go text/template to generate the output instead
 of appending external .md files automatically. In this case --exclude and
 .gomarkdown.yaml are not used. Two template functions are available:
+<<<<<<< HEAD
   - include "<path>" includes the contents of the specified file. The path
     is relative to the package's directory and may refer to a file in a
     subdirectory, but it may not refer to a file outside of the package's
     directory nor to the markdown output file (including via a symlink or
     hard link).
+=======
+  - include "<filename>" includes the contents of the specified file,
+    which must be within the package's directory and may not be the markdown
+    output file.
+>>>>>>> main
   - godoc generates the godoc markdown output for the package or command.
 
 # Command line flags
@@ -46,7 +52,11 @@ of appending external .md files automatically. In this case --exclude and
     -circleci string
       	set to the circleci project to insert a circleci build badge
     -exclude value
+<<<<<<< HEAD
       	comma-separated list of markdown files to exclude. (default "code_review.md")
+=======
+      	comma-separated list of markdown files to exclude. (default code_review.md)
+>>>>>>> main
     -gopkg string
       	link to this site for full godoc and godoc examples (default "pkg.go.dev")
     -goreportcard
